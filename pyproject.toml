@@ -1,0 +1,15 @@
+[project]
+name = "agent-1"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.109.1",
+    "docker>=7.1.0",
+    "langfuse>=4.7.1",
+    "mcp>=1.27.2",
+    "openai>=2.41.0",
+    "pydantic>=2.13.4",
+    "pytest>=9.0.3",
+]
