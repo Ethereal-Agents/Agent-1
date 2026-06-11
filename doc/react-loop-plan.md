@@ -46,13 +46,15 @@ Based on the design document, our `recall-agent` loop avoids complex triads and 
    * **Log:** Write the state, token usage, and tool output to the SQLite trajectory log.
    * **Compact:** If the token limit approaches, trigger **Anchored Summarization** (keep the issue, first few steps, and last few steps; summarize the middle).
 
-3. **Verification & Reflection (The Loop Exit):**
-   * The loop ends when the agent calls a special `submit_patch` tool.
-   * **Verify:** The system executes the `run_tests` tool on the patch (mocked to return pass/fail).
-   * **Reflect:** If tests fail and `refinement_turns < 2`:
-     * Append the test failure logs as a system observation.
-     * Instruct the agent to analyze the failure (Reflection) and resume the ReAct loop.
-   * If tests pass or limits are reached, the final trajectory and patch are written to `runs/`.
+3. **Verification, State, & Self-Reflection:**
+   * **State Ownership:** The core ReAct loop (`agent/loop.py`) maintains all state, including the 3-submission cap. We do NOT use a separate orchestration verifier script.
+   * **Exploratory TDD vs Final Submission:**
+     * `run_tests`: Can be called freely by the agent for intermediate TDD checks. It internally uses a cheap sub-LLM to parse messy raw stdout into clean XML.
+     * `submit_patch`: A dummy schema tool that signals final completion. Calling it triggers the full test suite and increments the submission counter.
+   * **The Reflection Flow:** 
+     * If tests pass: The loop appends a `[SUCCESS]` tool message, allowing the LLM to generate a final conversational summary before gracefully halting.
+     * If tests fail: The loop appends the XML test logs back to the LLM. The Main Agent naturally uses **Self-Reflection** (leveraging its existing full memory of the codebase) to course-correct. This completely avoids the "context-loss" problem found in isolated Critic nodes.
+   * If the `submit_patch` cap (3) is reached, a `[HARD STOP]` message is appended and the loop halts.
 
 ### Implementation Steps (What to code next)
 
@@ -70,6 +72,7 @@ Based on the design document, our `recall-agent` loop avoids complex triads and 
 * Write the `while` loop that handles the API response, parses tool calls, invokes the mocks, and appends the observations back to the history array.
 * Add Prompt Caching headers (supported by LiteLLM for Anthropic/Gemini) to the system prompt and stable early turns to keep costs near zero during development.
 
-**Phase 4: Bounded Reflection & Verifier (`agent/verifier.py`)**
-* Add the logic that catches the `submit_patch` tool.
-* Implement the reflection loop wrapper that re-triggers the core loop upon mock-test failure.
+**Phase 4: Inner-Loop Bounded Reflection (`agent/loop.py`)**
+* Implement the interception logic for `submit_patch` directly inside the ReAct loop.
+* Track the submission counter internally.
+* Implement the sub-LLM step within `run_tests` to format the test stdout into LLM-readable XML before returning it to the Main Agent.
