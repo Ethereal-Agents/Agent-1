@@ -95,3 +95,41 @@ def test_edit_file_not_found():
     result = tool.run(path="fake.txt", start_line=1, end_line=2, old_str="x", new_str="y")
     
     assert "ERROR: File 'fake.txt' not found." in result
+
+def test_edit_file_expansion(temp_file):
+    tool = EditTool()
+    old_str = "line2\nline3\n"
+    new_str = "NEW_LINE_2\nNEW_LINE_2.5\nNEW_LINE_2.75\nNEW_LINE_3\n"
+    
+    # Replacing 2 lines with 4 lines
+    result = tool.run(path=temp_file, start_line=2, end_line=3, old_str=old_str, new_str=new_str)
+    
+    assert "[SUCCESS] Edited" in result
+    
+    with open(temp_file, "r") as f:
+        lines = f.readlines()
+        
+    # File should now be 7 lines long
+    assert len(lines) == 7
+    assert "NEW_LINE_2.5\n" in lines
+    assert lines[0] == "line1\n"
+    assert lines[-1] == "line5\n"
+
+def test_edit_file_append(temp_file):
+    tool = EditTool()
+    old_str = ""
+    new_str = "line6\nline7\n"
+    
+    # Appending to the very bottom: start_line is 6, end_line is 6
+    result = tool.run(path=temp_file, start_line=6, end_line=6, old_str=old_str, new_str=new_str)
+    
+    assert "[SUCCESS] Edited" in result
+    
+    with open(temp_file, "r") as f:
+        lines = f.readlines()
+        
+    # File should now be 7 lines long
+    assert len(lines) == 7
+    assert lines[-2] == "line6\n"
+    assert lines[-1] == "line7\n"
+
