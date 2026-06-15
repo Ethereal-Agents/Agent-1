@@ -23,3 +23,6 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I"] # Pyflakes (F), pycodestyle errors (E), isort (I)
 ignore = ["E501"] # Ignore line too long, as error hint strings often exceed 100 chars
+
+[tool.setuptools.packages.find]
+exclude = ["tests", "doc"]
