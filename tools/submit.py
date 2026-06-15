@@ -15,12 +15,11 @@ class SubmitTool(BaseTool):
         from tools.utils import format_error
 
         try:
-            # Generate the patch of all current changes
+            # Stage all files so git tracks newly created files
+            subprocess.run(["git", "add", "-A"], check=True)
+            
+            # Generate a comprehensive patch against HEAD
             with open("fix.patch", "w", encoding="utf-8") as f:
-                subprocess.run(["git", "diff"], stdout=f, text=True, check=True)
-                
-            # Also append staged changes if any
-            with open("fix.patch", "a", encoding="utf-8") as f:
                 subprocess.run(["git", "diff", "--staged"], stdout=f, text=True, check=True)
                 
             return f"[AGENT_FINISHED] Solution submitted successfully.\nSummary: {summary}\nPatch generated at fix.patch."

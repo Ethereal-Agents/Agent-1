@@ -27,8 +27,9 @@ class CodeSearchTool(BaseTool):
 
         try:
             # -n forces line numbers, -H forces filename, --no-heading removes blank lines between files
+            # '--' stops flag parsing so queries starting with hyphens are safe
             result = subprocess.run(
-                [rg_path, "-n", "-H", "--no-heading", query, directory],
+                [rg_path, "-n", "-H", "--no-heading", "--", query, directory],
                 capture_output=True,
                 text=True
             )

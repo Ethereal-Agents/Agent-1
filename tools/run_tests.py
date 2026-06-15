@@ -15,7 +15,8 @@ class RunTestsTool(BaseTool):
         import xml.etree.ElementTree as ET
         from tools.utils import format_error, truncate_output
 
-        report_file = ".test_report.tmp.xml"
+        import uuid
+        report_file = f".test_report.{uuid.uuid4().hex}.xml"
         
         import sys
         try:
@@ -60,8 +61,9 @@ class RunTestsTool(BaseTool):
                 tests = int(testsuite.get('tests', 0))
                 fails = int(testsuite.get('failures', 0))
                 errors = int(testsuite.get('errors', 0))
+                skipped = int(testsuite.get('skipped', 0))
                 total_failed += (fails + errors)
-                total_passed += (tests - fails - errors)
+                total_passed += (tests - fails - errors - skipped)
 
             # Extract failure tracebacks
             for testcase in root.iter('testcase'):

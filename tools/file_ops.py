@@ -34,6 +34,8 @@ class ReadFileTool(BaseTool):
             )
             
         total_lines = len(lines)
+        if total_lines == 0:
+            return f"[FILE: {path} | Showing lines 0-0 of 0]\n[FILE IS EMPTY]"
         
         # 1-indexed conversions
         start = start_line if start_line is not None else 1
@@ -98,7 +100,8 @@ class EditTool(BaseTool):
             )
             
         total_lines = len(lines)
-        if start_line < 1 or end_line > total_lines or start_line > end_line:
+        # Allow appending: start_line can be up to total_lines + 1
+        if start_line < 1 or start_line > total_lines + 1 or start_line > end_line:
             return format_error(
                 reason=f"Invalid line range: {start_line}-{end_line}. File has {total_lines} lines.",
                 attempted=f"edit(start_line={start_line}, end_line={end_line})",
