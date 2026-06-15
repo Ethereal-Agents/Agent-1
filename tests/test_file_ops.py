@@ -1,6 +1,7 @@
-import os
 import pytest
-from tools.file_ops import ReadFileTool, EditTool
+
+from tools.file_ops import EditTool, ReadFileTool
+
 
 @pytest.fixture
 def temp_file(tmp_path):

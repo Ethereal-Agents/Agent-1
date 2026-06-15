@@ -1,9 +1,11 @@
 import os
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
 from tools.base import BaseTool
 from tools.utils import format_error, truncate_output
+
 
 class ReadFileArgs(BaseModel):
     path: str = Field(..., description="The relative path to the file to read.")

@@ -1,5 +1,7 @@
 from typing import Any, Dict, Type
+
 from pydantic import BaseModel
+
 
 class BaseTool:
     """Abstract base class for all agent tools."""

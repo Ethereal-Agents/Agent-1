@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
+
 from tools.base import BaseTool
+
 
 class BashArgs(BaseModel):
     command: str = Field(..., description="The bash command to execute.")
@@ -11,6 +13,7 @@ class BashTool(BaseTool):
 
     def run(self, command: str, **kwargs) -> str:
         import subprocess
+
         from tools.utils import format_error, truncate_output
 
         try:

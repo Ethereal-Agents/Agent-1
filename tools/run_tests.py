@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
+
 from tools.base import BaseTool
+
 
 class RunTestsArgs(BaseModel):
     target: str = Field(..., description="The test file, directory, or specific test case to run.")
@@ -10,12 +12,12 @@ class RunTestsTool(BaseTool):
     args_schema = RunTestsArgs
 
     def run(self, target: str, **kwargs) -> str:
-        import subprocess
         import os
-        import xml.etree.ElementTree as ET
-        from tools.utils import format_error, truncate_output
-
+        import subprocess
         import uuid
+        import xml.etree.ElementTree as ET
+
+        from tools.utils import format_error, truncate_output
         report_file = f".test_report.{uuid.uuid4().hex}.xml"
         
         import sys

@@ -1,6 +1,7 @@
-import os
 import pytest
+
 from tools.search import CodeSearchTool
+
 
 @pytest.fixture
 def temp_repo(tmp_path):

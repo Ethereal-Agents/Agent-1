@@ -1,7 +1,8 @@
-import os
 import pytest
+
 from tools.bash import BashTool
 from tools.run_tests import RunTestsTool
+
 
 def test_bash_success():
     tool = BashTool()

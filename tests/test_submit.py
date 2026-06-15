@@ -1,6 +1,5 @@
-import os
-import pytest
 from tools.submit import SubmitTool
+
 
 def test_submit_tool(tmp_path, monkeypatch):
     # Change to temp dir to avoid git issues, though it might fail if not in a git repo.

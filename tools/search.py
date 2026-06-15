@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
+
 from tools.base import BaseTool
+
 
 class CodeSearchArgs(BaseModel):
     query: str = Field(..., description="The string or regex pattern to search for across the codebase.")
@@ -11,8 +13,9 @@ class CodeSearchTool(BaseTool):
     args_schema = CodeSearchArgs
 
     def run(self, query: str, directory: str = ".", **kwargs) -> str:
-        import subprocess
         import os
+        import subprocess
+
         from tools.utils import format_error, truncate_output
 
         if not os.path.isdir(directory):

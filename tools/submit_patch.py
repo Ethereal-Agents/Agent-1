@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
+
 from tools.base import BaseTool
+
 
 class SubmitPatchArgs(BaseModel):
     reasoning: str = Field(..., description="The final reasoning and summary of the patch being submitted.")

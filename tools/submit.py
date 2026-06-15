@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
+
 from tools.base import BaseTool
+
 
 class SubmitArgs(BaseModel):
     summary: str = Field(..., description="A brief summary of the changes made to solve the issue.")
@@ -11,7 +13,7 @@ class SubmitTool(BaseTool):
 
     def run(self, summary: str, **kwargs) -> str:
         import subprocess
-        import os
+
         from tools.utils import format_error
 
         try:
