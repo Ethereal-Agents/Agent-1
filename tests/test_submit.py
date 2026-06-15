@@ -7,7 +7,7 @@ def test_submit_tool(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     tool = SubmitTool()
     result = tool.run(summary="Tested submit")
-    
+
     # It should fail elegantly because tmp_path is not a git repo
     assert "ERROR: Failed to generate patch" in result
     assert "HINT: Ensure you are inside a git repository." in result

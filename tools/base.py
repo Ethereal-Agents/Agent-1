@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class BaseTool:
     """Abstract base class for all agent tools."""
+
     name: str
     description: str
     args_schema: Type[BaseModel]
@@ -20,6 +21,6 @@ class BaseTool:
             "function": {
                 "name": self.name,
                 "description": self.description,
-                "parameters": self.args_schema.model_json_schema()
-            }
+                "parameters": self.args_schema.model_json_schema(),
+            },
         }

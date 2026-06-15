@@ -14,15 +14,17 @@ TOOLS: List[BaseTool] = [
     BashTool(),
     CodeSearchTool(),
     RunTestsTool(),
-    SubmitPatchTool()
+    SubmitPatchTool(),
 ]
 
 # Map tool name to tool instance for fast execution
 TOOL_MAP: Dict[str, BaseTool] = {tool.name: tool for tool in TOOLS}
 
+
 def get_openai_tools() -> List[Dict[str, Any]]:
     """Returns the list of tools formatted for the LiteLLM/OpenAI API."""
     return [tool.to_openai_tool() for tool in TOOLS]
+
 
 def execute_tool(name: str, arguments: Dict[str, Any]) -> str:
     """Executes a tool by name with the given dictionary of arguments."""

@@ -10,6 +10,7 @@ def truncate_output(text: str, max_len: int = 3000) -> str:
     keep_len = max_len - len(warning)
     return text[:keep_len] + warning
 
+
 def format_error(reason: str, attempted: str, hint: str) -> str:
     """
     Formats all errors into the strict tripartite format required by the 2026 Zylos study,
