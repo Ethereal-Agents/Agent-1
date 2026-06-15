@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        
+    - name: Install uv
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      
+    - name: Install ripgrep
+      run: sudo apt-get update && sudo apt-get install -y ripgrep
+      
+    - name: Install dependencies
+      run: |
+        $HOME/.cargo/bin/uv venv
+        $HOME/.cargo/bin/uv pip install -e .
+        
+    - name: Run Ruff Linter
+      run: |
+        $HOME/.cargo/bin/uv run ruff check .
+        $HOME/.cargo/bin/uv run ruff format --check .
+        
+    - name: Run Pytest
+      run: |
+        $HOME/.cargo/bin/uv run pytest tests/ -v
