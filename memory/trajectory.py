@@ -1,10 +1,11 @@
-import os
 import json
+import os
 import sqlite3
-from typing import List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List
 
 from config import RUNS_DIR
+
 DB_PATH = os.path.join(RUNS_DIR, "metrics.db")
 
 def init_db():

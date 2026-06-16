@@ -1,6 +1,7 @@
-import pytest
-from unittest.mock import patch, mock_open
+from unittest.mock import mock_open, patch
+
 import config
+
 
 def test_get_system_prompt():
     with patch("builtins.open", mock_open(read_data="mock_system_prompt")) as m:

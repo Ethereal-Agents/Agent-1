@@ -1,9 +1,10 @@
-import os
 import json
 import sqlite3
+
 import pytest
 
 from memory import trajectory
+
 
 @pytest.fixture
 def mock_db(tmp_path, monkeypatch):

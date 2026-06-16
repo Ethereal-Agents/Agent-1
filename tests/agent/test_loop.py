@@ -1,9 +1,10 @@
-import json
-import pytest
 from unittest.mock import patch
 
+import pytest
+
 from agent.loop import Agent, run_agent
-from config import MAX_SUBMISSIONS, COMPACTION_THRESHOLD
+from config import COMPACTION_THRESHOLD, MAX_SUBMISSIONS
+
 
 @pytest.fixture
 def mock_config():

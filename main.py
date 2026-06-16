@@ -4,6 +4,7 @@ import sys
 
 from agent.loop import run_agent
 
+
 def main():
     parser = argparse.ArgumentParser(description="Recall Agent CLI")
     parser.add_argument("issue", type=str, help="The issue description or task for the agent to solve.")
@@ -22,7 +23,7 @@ def main():
     # Changing the python process directory ensures all subprocesses (bash) and file operations 
     # relative to the current working directory will operate in the target directory!
     os.chdir(target_dir)
-    print(f"🤖 Starting Recall Agent...")
+    print("🤖 Starting Recall Agent...")
     print(f"📂 Operating Directory: {target_dir}")
 
     # 2. Start the ReAct Loop
