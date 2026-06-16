@@ -1,4 +1,3 @@
-
 from tools.environment import DockerEnvironment
 from tools.registry import execute_tool, initialize_tools
 

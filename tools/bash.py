@@ -33,7 +33,7 @@ class BashTool(BaseTool):
             return format_error(
                 reason=f"Failed to execute command: {str(e)}",
                 attempted=f"bash(command='{command[:50]}...')",
-                hint="Ensure your bash syntax is valid.",
+                hint="A deep system or OS error occurred. Verify your execution environment is functioning correctly.",
             )
 
         # Build the structured XML response

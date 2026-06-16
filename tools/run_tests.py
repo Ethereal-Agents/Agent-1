@@ -15,6 +15,7 @@ class RunTestsTool(BaseTool):
     args_schema = RunTestsArgs
 
     def run(self, targets: list[str], **kwargs) -> str:
+        import subprocess
         import uuid
         import xml.etree.ElementTree as ET
 
@@ -26,18 +27,25 @@ class RunTestsTool(BaseTool):
             # We don't strictly care about the return code here (pytest returns 1 on failure),
             # because we will parse the XML it spits out.
             cmd_str = f"python -m pytest {' '.join(targets)} --junitxml={report_file}"
-            self.env.run_bash(cmd_str, timeout=300)
-        except FileNotFoundError:
+            result = self.env.run_bash(cmd_str, timeout=300)
+        except subprocess.TimeoutExpired:
             return format_error(
-                reason="pytest is not installed or not in PATH.",
-                attempted="subprocess.run(['pytest', ...])",
-                hint="Ensure you are running in the correct virtual environment where pytest is installed.",
+                reason="Pytest execution timed out after 300 seconds.",
+                attempted=cmd_str,
+                hint="One of the tests might contain an infinite loop or require user input.",
             )
         except Exception as e:
             return format_error(
                 reason=f"Failed to execute pytest: {str(e)}",
                 attempted=f"run_tests(targets={targets})",
-                hint="Check if the target path exists.",
+                hint="A deep system or OS error occurred. Verify your execution environment is functioning correctly.",
+            )
+
+        if result.returncode == 127:
+            return format_error(
+                reason="pytest or python is not installed or not in PATH.",
+                attempted=cmd_str,
+                hint="Ensure you are running in an environment where pytest is installed.",
             )
 
         try:

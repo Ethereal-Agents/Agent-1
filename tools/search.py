@@ -16,16 +16,9 @@ class CodeSearchTool(BaseTool):
     args_schema = CodeSearchArgs
 
     def run(self, query: str, directory: str = ".", **kwargs) -> str:
-        import os
+        import subprocess
 
         from tools.utils import format_error, truncate_output
-
-        if not os.path.isdir(directory):
-            return format_error(
-                reason=f"Directory '{directory}' not found.",
-                attempted=f"code_search(directory='{directory}')",
-                hint="Use the bash tool with 'ls' to check the directory structure.",
-            )
 
         try:
             import shlex
@@ -36,17 +29,24 @@ class CodeSearchTool(BaseTool):
             cmd_str = f"rg -n -H --no-heading -- {query_esc} {dir_esc}"
 
             result = self.env.run_bash(cmd_str, timeout=120)
-        except FileNotFoundError:
+        except subprocess.TimeoutExpired:
             return format_error(
-                reason="The 'rg' (ripgrep) command is not found in the ExecutionEnvironment.",
-                attempted="self.env.run_bash('rg ...')",
-                hint="You must install ripgrep in the target environment.",
+                reason="Ripgrep search timed out after 120 seconds.",
+                attempted=cmd_str,
+                hint="The directory might be too large. Try narrowing your search directory.",
             )
         except Exception as e:
             return format_error(
                 reason=f"Failed to execute ripgrep: {str(e)}",
                 attempted=f"code_search(query='{query}')",
-                hint="Check if the query is a valid regex.",
+                hint="A deep system or OS error occurred. Verify your execution environment is functioning correctly.",
+            )
+
+        if result.returncode == 127:
+            return format_error(
+                reason="The 'rg' (ripgrep) command is not found in the environment.",
+                attempted=cmd_str,
+                hint="You must install ripgrep in the target environment.",
             )
 
         if result.returncode == 1 and not result.stdout:
