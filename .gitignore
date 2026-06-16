@@ -3,3 +3,13 @@
 __pycache__/
 *.pyc
 .env
+
+# Testing
+.coverage
+coverage.xml
+htmlcov/
+
+# Python
+*.egg-info/
+__pycache__/
+*.pyc
