@@ -2,7 +2,9 @@ import os
 import yaml
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(BASE_DIR, "config.yaml")
+# Allow override via environment variable, otherwise default to configs/default.yaml
+config_filename = os.getenv("RECALL_CONFIG", "configs/default.yaml")
+CONFIG_PATH = os.path.join(BASE_DIR, config_filename)
 
 def load_config():
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
