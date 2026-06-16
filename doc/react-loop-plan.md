@@ -62,9 +62,10 @@ Based on the design document, our `recall-agent` loop avoids complex triads and 
 * Define Pydantic schemas for our required tools (`bash`, `read_file`, `write_file`, `edit`, `code_search`, `run_tests`, `arxiv_scholar`).
 * Create dummy implementations that return hardcoded or simple string responses so the ReAct loop can be tested in isolation.
 
-**Phase 2: Trajectory Logging (`memory/sqlite_log.py`)**
-* Set up a simple SQLite table to store `(step_id, role, content, tool_calls, tokens, timestamp)`.
-* This ensures we have our evaluation data source ready from day 1.
+**Phase 2: Trajectory Logging (`memory/trajectory.py`)**
+* Store the full ReAct `history` array as a `.jsonl` or `.traj` file per instance (following the SWE-agent and OpenHands pattern for easy web visualization).
+* Set up a lightweight SQLite table purely for high-level benchmark metrics (e.g., `instance_id`, `pass/fail`, `token_usage`, `cost`, `duration`).
+* This ensures our raw data is portable while giving us a queryable dashboard for evaluation.
 
 **Phase 3: The Core Agent (`agent/loop.py`)**
 * Implement the main `run_agent(task)` function.
