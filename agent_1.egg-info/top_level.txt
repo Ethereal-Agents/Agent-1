@@ -1,7 +1,0 @@
-agent
-eval
-mcp
-memory
-prompts
-runs
-tools
