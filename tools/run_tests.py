@@ -4,7 +4,9 @@ from tools.base import BaseTool
 
 
 class RunTestsArgs(BaseModel):
-    target: str = Field(..., description="The test file, directory, or specific test case to run.")
+    targets: list[str] = Field(
+        ..., description="A list of test files, directories, or specific test cases to run."
+    )
 
 
 class RunTestsTool(BaseTool):
@@ -12,7 +14,7 @@ class RunTestsTool(BaseTool):
     description = "Runs the test suite and returns structured execution results."
     args_schema = RunTestsArgs
 
-    def run(self, target: str, **kwargs) -> str:
+    def run(self, targets: list[str], **kwargs) -> str:
         import os
         import subprocess
         import uuid
@@ -28,7 +30,7 @@ class RunTestsTool(BaseTool):
             # We don't strictly care about the return code here (pytest returns 1 on failure),
             # because we will parse the XML it spits out.
             subprocess.run(
-                [sys.executable, "-m", "pytest", target, f"--junitxml={report_file}"],
+                [sys.executable, "-m", "pytest"] + targets + [f"--junitxml={report_file}"],
                 capture_output=True,
                 text=True,
             )
@@ -41,14 +43,14 @@ class RunTestsTool(BaseTool):
         except Exception as e:
             return format_error(
                 reason=f"Failed to execute pytest: {str(e)}",
-                attempted=f"run_tests(target='{target}')",
+                attempted=f"run_tests(targets={targets})",
                 hint="Check if the target path exists.",
             )
 
         if not os.path.exists(report_file):
             return format_error(
                 reason="Pytest did not generate the XML report.",
-                attempted=f"run_tests(target='{target}')",
+                attempted=f"run_tests(targets={targets})",
                 hint="Check if the target contains valid tests. It may have failed to collect tests entirely.",
             )
 

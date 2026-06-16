@@ -33,7 +33,7 @@ def temp_test_file(tmp_path):
 
 def test_run_tests_tool(temp_test_file):
     tool = RunTestsTool()
-    result = tool.run(target=temp_test_file)
+    result = tool.run(targets=[temp_test_file])
 
     # Check the structured summary
     assert "<status>FAILED</status>" in result
@@ -55,12 +55,12 @@ def test_bash_timeout():
 
 def test_run_tests_missing_target():
     tool = RunTestsTool()
-    result = tool.run(target="does_not_exist_123.py")
+    result = tool.run(targets=["does_not_exist_123.py"])
     assert "<status>PASSED</status>" in result
     assert "<total_passed>0</total_passed>" in result
 
 
 def test_run_tests_invalid_flag():
     tool = RunTestsTool()
-    result = tool.run(target="--this-flag-is-invalid-and-will-break-pytest")
+    result = tool.run(targets=["--this-flag-is-invalid-and-will-break-pytest"])
     assert "ERROR: Pytest did not generate the XML report." in result
