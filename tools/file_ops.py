@@ -53,7 +53,7 @@ class ReadFileTool(BaseTool):
         if start > end:
             return format_error(
                 reason=f"start_line ({start}) cannot be greater than end_line ({end}).",
-                attempted=f"read_file(start_line={start}, end_line={end})",
+                attempted=f"read_file(path='{path}', start_line={start}, end_line={end})",
                 hint="Check the total lines of the file and ensure start_line <= end_line.",
             )
 
@@ -119,7 +119,7 @@ class EditTool(BaseTool):
         if start_line < 1 or start_line > total_lines + 1 or start_line > end_line:
             return format_error(
                 reason=f"Invalid line range: {start_line}-{end_line}. File has {total_lines} lines.",
-                attempted=f"edit(start_line={start_line}, end_line={end_line})",
+                attempted=f"edit(path='{path}', start_line={start_line}, end_line={end_line})",
                 hint="Use read_file to check the exact line numbers you want to edit.",
             )
 
@@ -131,7 +131,7 @@ class EditTool(BaseTool):
         if old_str.rstrip() != actual_str.rstrip():
             return format_error(
                 reason="The old_str provided did not perfectly match the file contents.",
-                attempted=f"edit(old_str='{old_str[:100]}...')",
+                attempted=f"edit(path='{path}', old_str='{old_str[:100]}...')",
                 hint=f"Your old_str must match EXACTLY, including whitespace. The actual text in that range is:\n{actual_str}\nPlease use read_file to view the exact lines.",
             )
 
@@ -149,7 +149,7 @@ class EditTool(BaseTool):
         except Exception as e:
             return format_error(
                 reason=f"Failed to write changes: {str(e)}",
-                attempted="File save",
+                attempted=f"edit(path='{path}')",
                 hint="Check directory permissions.",
             )
 

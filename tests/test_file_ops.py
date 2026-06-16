@@ -49,7 +49,7 @@ def test_read_file_invalid_range(temp_file):
 
     # Should trigger the standard error format
     assert "ERROR: start_line (4) cannot be greater than end_line (2)" in result
-    assert "ATTEMPTED: read_file(start_line=4, end_line=2)" in result
+    assert f"ATTEMPTED: read_file(path='{temp_file}', start_line=4, end_line=2)" in result
     assert "HINT:" in result
 
 
@@ -98,7 +98,8 @@ def test_edit_file_invalid_range(temp_file):
     tool = EditTool()
     result = tool.run(path=temp_file, start_line=4, end_line=2, old_str="x", new_str="y")
 
-    assert "ERROR: Invalid line range: 4-2." in result
+    assert "ERROR: Invalid line range: 4-2. File has 5 lines." in result
+    assert f"ATTEMPTED: edit(path='{temp_file}', start_line=4, end_line=2)" in result
     assert "HINT: Use read_file to check the exact line numbers" in result
 
 
