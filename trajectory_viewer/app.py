@@ -1,7 +1,8 @@
-import streamlit as st
 import json
 import os
 import re
+
+import streamlit as st
 
 st.set_page_config(page_title="JSONL Trajectory Viewer", layout="wide", initial_sidebar_state="expanded")
 
@@ -58,7 +59,7 @@ def render_assistant_content(content_str):
             idx += 1
             
             if idx < len(parts):
-                tag_name = parts[idx] # 'thought' or 'thinking'
+                _ = parts[idx] # 'thought' or 'thinking'
                 idx += 1
                 
                 if idx < len(parts):
@@ -176,7 +177,7 @@ if file_path and os.path.exists(file_path):
                         try:
                             formatted_args = json.dumps(json.loads(args), indent=2)
                             st.code(formatted_args, language="json")
-                        except:
+                        except Exception:
                             st.code(args, language="json")
                             
                         if tool_out_data:
