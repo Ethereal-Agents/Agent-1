@@ -8,12 +8,31 @@ from memory.trajectory import save_trajectory
 MAX_STEPS = 30
 MAX_SUBMISSIONS = 3
 
-SYSTEM_PROMPT = """You are recall-agent, an expert software engineer.
-You solve GitHub issues by exploring the codebase, making targeted edits, and running tests.
+SYSTEM_PROMPT = """You are an expert autonomous software engineer. Your task is to resolve a GitHub issue by navigating the codebase, finding the root cause, and applying a robust fix.
 
-Always think step-by-step. Write out your reasoning before making tool calls.
-You must use your tools to navigate the codebase and find the bug.
-When you are completely finished and confident in your patch, use the `submit_patch` tool to run the final test suite.
+# Core Directives & Best Practices
+
+1. **Explore Before You Edit (No Guessing)**
+   - DO NOT guess file paths, function names, or variable names.
+   - Always use your search tools to find the exact location of the relevant code.
+   - Read the surrounding context of a file before attempting an edit.
+
+2. **Chain of Thought (Reasoning)**
+   - Before making ANY tool call, you MUST write out your reasoning in a `<thought>` block.
+   - Explain what you are trying to achieve, what tool you are using, and why.
+
+3. **Incremental Verification (TDD)**
+   - Do not wait until the very end to run tests. 
+   - Use the standard test/bash tools iteratively to check your local changes.
+   - If a tool returns an error or a test fails, do not panic and do not blindly retry. Read the error carefully and reflect on your mistake.
+
+4. **No Laziness or Placeholders**
+   - When writing code, provide complete, functional implementations. 
+   - Never use placeholders like `// ... rest of code ...` or `pass # TODO`. 
+
+5. **Final Submission**
+   - When you are absolutely certain the issue is resolved and tests pass, use the `submit_patch` tool.
+   - You only have a limited number of submission attempts. Do not guess.
 """
 
 def run_agent(issue_description: str, model: str = "claude-4-5-haiku", instance_id: str = "test_run_001") -> List[Dict[str, Any]]:
@@ -28,6 +47,7 @@ def run_agent(issue_description: str, model: str = "claude-4-5-haiku", instance_
     
     step_count = 0
     submit_count = 0
+    cumulative_tokens = 0
     
     while step_count < MAX_STEPS:
         print(f"\n--- Step {step_count + 1} ---")
@@ -42,6 +62,10 @@ def run_agent(issue_description: str, model: str = "claude-4-5-haiku", instance_
         except Exception as e:
             print(f"API Error: {e}")
             break
+            
+        # Track tokens
+        if hasattr(response, 'usage') and response.usage:
+            cumulative_tokens += getattr(response.usage, 'total_tokens', 0)
             
         message = response.choices[0].message
         
@@ -118,18 +142,31 @@ def run_agent(issue_description: str, model: str = "claude-4-5-haiku", instance_
             
         step_count += 1
         
-        # TODO: Implement token tracking and "Sawtooth" memory compaction here
+        # --- "Sawtooth" Memory Compaction ---
+        # If history gets too long, compress the middle to prevent LLM amnesia and save tokens.
+        if len(history) > 15:
+            print("\n[Memory Compaction] Triggering Sawtooth compaction...")
+            head = history[:2]  # Keep System Prompt and original User Task
+            tail = history[-5:] # Keep the most recent context
+            
+            # In a fully-fledged system, we would do a cheap LLM call here to summarize history[2:-5].
+            # For Phase 1, we use a static placeholder.
+            middle_summary = {
+                "role": "user",
+                "content": "[SYSTEM MEMORY COMPACTION] Intermediate steps have been summarized to save context. The agent explored the codebase and ran tools."
+            }
+            history = head + [middle_summary] + tail
         
     if step_count >= MAX_STEPS:
         print("\n[HARD STOP] Max steps reached.")
         
     duration = time.time() - start_time
     
-    # Basic metrics (can be enriched later with actual token costs from LiteLLM usage)
+    # Basic metrics
     metrics = {
         "status": "completed" if step_count < MAX_STEPS else "max_steps_reached",
         "total_steps": step_count,
-        "total_tokens": 0,  # TODO: extract from response.usage
+        "total_tokens": cumulative_tokens,
         "cost": 0.0,
         "duration_seconds": duration
     }
