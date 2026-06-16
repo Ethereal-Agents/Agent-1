@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 from tools.registry import get_openai_tools, execute_tool
 from memory.trajectory import save_trajectory
 
-from config import MAX_STEPS, MAX_SUBMISSIONS, DEFAULT_MODEL, get_system_prompt
+from config import MAX_STEPS, MAX_SUBMISSIONS, COMPACTION_THRESHOLD, DEFAULT_MODEL, get_system_prompt
 
 SYSTEM_PROMPT = get_system_prompt()
 
@@ -118,7 +118,7 @@ def run_agent(issue_description: str, model: str = DEFAULT_MODEL, instance_id: s
         
         # --- "Sawtooth" Memory Compaction ---
         # If history gets too long, compress the middle to prevent LLM amnesia and save tokens.
-        if len(history) > 15:
+        if len(history) > COMPACTION_THRESHOLD:
             print("\n[Memory Compaction] Triggering Sawtooth compaction...")
             head = history[:2]  # Keep System Prompt and original User Task
             tail = history[-5:] # Keep the most recent context
