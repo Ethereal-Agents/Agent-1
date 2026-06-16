@@ -7,10 +7,27 @@ from agent.loop import run_agent
 
 def main():
     parser = argparse.ArgumentParser(description="Recall Agent CLI")
-    parser.add_argument("issue", type=str, help="The issue description or task for the agent to solve.")
-    parser.add_argument("--dir", type=str, default=".", help="The target directory for the agent to operate in. Defaults to current directory.")
-    parser.add_argument("--model", type=str, default=None, help="The LiteLLM model to use. Overrides the default in config.yaml.")
-    parser.add_argument("--instance-id", type=str, default=None, help="The instance ID for logging metrics and trajectories.")
+    parser.add_argument(
+        "issue", type=str, help="The issue description or task for the agent to solve."
+    )
+    parser.add_argument(
+        "--dir",
+        type=str,
+        default=".",
+        help="The target directory for the agent to operate in. Defaults to current directory.",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="The LiteLLM model to use. Overrides the default in config.yaml.",
+    )
+    parser.add_argument(
+        "--instance-id",
+        type=str,
+        default=None,
+        help="The instance ID for logging metrics and trajectories.",
+    )
 
     args = parser.parse_args()
 
@@ -19,8 +36,8 @@ def main():
     if not os.path.exists(target_dir):
         print(f"Error: Directory '{target_dir}' does not exist.")
         sys.exit(1)
-        
-    # Changing the python process directory ensures all subprocesses (bash) and file operations 
+
+    # Changing the python process directory ensures all subprocesses (bash) and file operations
     # relative to the current working directory will operate in the target directory!
     os.chdir(target_dir)
     print("🤖 Starting Recall Agent...")
@@ -32,6 +49,7 @@ def main():
     else:
         # Falls back to DEFAULT_MODEL in config
         run_agent(args.issue, instance_id=args.instance_id)
+
 
 if __name__ == "__main__":
     main()
