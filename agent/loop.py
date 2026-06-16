@@ -22,6 +22,7 @@ def run_agent(issue_description: str, model: str = DEFAULT_MODEL, instance_id: s
     step_count = 0
     submit_count = 0
     cumulative_tokens = 0
+    cumulative_cost = 0.0
     
     while step_count < MAX_STEPS:
         print(f"\n--- Step {step_count + 1} ---")
@@ -37,9 +38,16 @@ def run_agent(issue_description: str, model: str = DEFAULT_MODEL, instance_id: s
             print(f"API Error: {e}")
             break
             
-        # Track tokens
+        # Track tokens and cost
         if hasattr(response, 'usage') and response.usage:
             cumulative_tokens += getattr(response.usage, 'total_tokens', 0)
+        
+        try:
+            step_cost = litellm.completion_cost(completion_response=response)
+            if step_cost:
+                cumulative_cost += step_cost
+        except Exception:
+            pass # Fails gracefully if the model is too new or cost is unknown
             
         message = response.choices[0].message
         
@@ -141,7 +149,7 @@ def run_agent(issue_description: str, model: str = DEFAULT_MODEL, instance_id: s
         "status": "completed" if step_count < MAX_STEPS else "max_steps_reached",
         "total_steps": step_count,
         "total_tokens": cumulative_tokens,
-        "cost": 0.0,
+        "cost": cumulative_cost,
         "duration_seconds": duration
     }
     
