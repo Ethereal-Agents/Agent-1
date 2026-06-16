@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml"
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        
+    - name: Install ripgrep
+      run: sudo apt-get update && sudo apt-get install -y ripgrep
+      
+    - name: Install dependencies
+      run: |
+        uv venv
+        uv pip install -e .
+        
+    - name: Run Ruff Linter
+      run: |
+        uv run ruff check .
+        uv run ruff format --check .
+        
+    - name: Run Pytest
+      run: |
+        uv run pytest tests/ -v --cov=tools --cov-fail-under=90
