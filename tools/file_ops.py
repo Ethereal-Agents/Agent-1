@@ -75,7 +75,7 @@ class ReadFileTool(BaseTool):
         return truncate_output(result)
 
 
-class EditArgs(BaseModel):
+class EditFileArgs(BaseModel):
     path: str = Field(..., description="The relative path to the file to edit.")
     start_line: int = Field(
         ..., description="The starting line number of the block to replace (1-indexed)."
@@ -92,7 +92,7 @@ class EditArgs(BaseModel):
 class EditTool(BaseTool):
     name = "edit"
     description = "Edits a file by replacing old_str with new_str."
-    args_schema = EditArgs
+    args_schema = EditFileArgs
 
     def run(
         self, path: str, start_line: int, end_line: int, old_str: str, new_str: str, **kwargs

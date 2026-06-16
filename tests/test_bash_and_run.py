@@ -44,3 +44,23 @@ def test_run_tests_tool(temp_test_file):
     assert "<failure_details>" in result
     assert '<test name="test_dummy.test_fail">' in result
     assert "This test is supposed to fail" in result
+
+
+def test_bash_timeout():
+    tool = BashTool()
+    result = tool.run(command="sleep 2", timeout=1)
+    assert "Command timed out after 1" in result
+    assert "ATTEMPTED: bash(command='sleep 2..." in result
+
+
+def test_run_tests_missing_target():
+    tool = RunTestsTool()
+    result = tool.run(target="does_not_exist_123.py")
+    assert "<status>PASSED</status>" in result
+    assert "<total_passed>0</total_passed>" in result
+
+
+def test_run_tests_invalid_flag():
+    tool = RunTestsTool()
+    result = tool.run(target="--this-flag-is-invalid-and-will-break-pytest")
+    assert "ERROR: Pytest did not generate the XML report." in result

@@ -5,6 +5,10 @@ from tools.base import BaseTool
 
 class BashArgs(BaseModel):
     command: str = Field(..., description="The bash command to execute.")
+    timeout: int = Field(
+        default=120,
+        description="The maximum time in seconds to allow the command to run before timing out. Default is 120.",
+    )
 
 
 class BashTool(BaseTool):
@@ -12,7 +16,7 @@ class BashTool(BaseTool):
     description = "Executes a bash command in the project environment."
     args_schema = BashArgs
 
-    def run(self, command: str, **kwargs) -> str:
+    def run(self, command: str, timeout: int = 120, **kwargs) -> str:
         import subprocess
 
         from tools.utils import format_error, truncate_output
@@ -23,13 +27,13 @@ class BashTool(BaseTool):
                 shell=True,
                 capture_output=True,
                 text=True,
-                timeout=120,  # Prevent infinite loops / interactive hangs
+                timeout=timeout,  # Prevent infinite loops / interactive hangs
             )
         except subprocess.TimeoutExpired:
             return format_error(
-                reason="Command timed out after 120 seconds.",
-                attempted=f"bash(command='{command[:50]}...')",
-                hint="Do not run interactive commands (like vim, nano, or bare python REPL) or infinite loops. If compiling, it may just take longer.",
+                reason=f"Command timed out after {timeout} seconds.",
+                attempted=f"bash(command='{command[:50]}...', timeout={timeout})",
+                hint="Do not run interactive commands (like vim, nano, or bare python REPL) or infinite loops. If compiling, increase the timeout parameter.",
             )
         except Exception as e:
             return format_error(

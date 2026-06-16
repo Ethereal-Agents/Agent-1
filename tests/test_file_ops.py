@@ -131,18 +131,25 @@ def test_edit_file_expansion(temp_file):
 
 def test_edit_file_append(temp_file):
     tool = EditTool()
-    old_str = ""
-    new_str = "line6\nline7\n"
-
-    # Appending to the very bottom: start_line is 6, end_line is 6
-    result = tool.run(path=temp_file, start_line=6, end_line=6, old_str=old_str, new_str=new_str)
+    # File has 5 lines
+    # We append to the very end
+    result = tool.run(
+        path=temp_file, start_line=6, end_line=6, old_str="", new_str="line6\nline7\n"
+    )
 
     assert "[SUCCESS] Edited" in result
-
     with open(temp_file, "r") as f:
-        lines = f.readlines()
+        content = f.read()
+    assert "line4\nline5\nline6\nline7\n" in content
 
-    # File should now be 7 lines long
-    assert len(lines) == 7
-    assert lines[-2] == "line6\n"
-    assert lines[-1] == "line7\n"
+
+def test_read_file_permission_error(temp_file):
+    import os
+
+    os.chmod(temp_file, 0o000)
+    try:
+        tool = ReadFileTool()
+        result = tool.run(path=temp_file)
+        assert "ERROR: Failed to read file:" in result
+    finally:
+        os.chmod(temp_file, 0o644)
