@@ -17,7 +17,6 @@ class CodeSearchTool(BaseTool):
 
     def run(self, query: str, directory: str = ".", **kwargs) -> str:
         import os
-        import subprocess
 
         from tools.utils import format_error, truncate_output
 
@@ -28,23 +27,20 @@ class CodeSearchTool(BaseTool):
                 hint="Use the bash tool with 'ls' to check the directory structure.",
             )
 
-        import shutil
-
-        rg_path = shutil.which("rg") or "rg"
-
         try:
-            # -n forces line numbers, -H forces filename, --no-heading removes blank lines between files
-            # '--' stops flag parsing so queries starting with hyphens are safe
-            result = subprocess.run(
-                [rg_path, "-n", "-H", "--no-heading", "--", query, directory],
-                capture_output=True,
-                text=True,
-            )
+            import shlex
+
+            # We must escape the arguments since self.env.run_bash uses shell=True
+            query_esc = shlex.quote(query)
+            dir_esc = shlex.quote(directory)
+            cmd_str = f"rg -n -H --no-heading -- {query_esc} {dir_esc}"
+
+            result = self.env.run_bash(cmd_str, timeout=120)
         except FileNotFoundError:
             return format_error(
-                reason="The 'rg' (ripgrep) command is not found in the system PATH.",
-                attempted="subprocess.run(['rg', ...])",
-                hint="You must install ripgrep using the appropriate package manager for your OS and ensure it is in your PATH.",
+                reason="The 'rg' (ripgrep) command is not found in the ExecutionEnvironment.",
+                attempted="self.env.run_bash('rg ...')",
+                hint="You must install ripgrep in the target environment.",
             )
         except Exception as e:
             return format_error(

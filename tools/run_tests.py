@@ -15,25 +15,18 @@ class RunTestsTool(BaseTool):
     args_schema = RunTestsArgs
 
     def run(self, targets: list[str], **kwargs) -> str:
-        import os
-        import subprocess
         import uuid
         import xml.etree.ElementTree as ET
 
         from tools.utils import format_error, truncate_output
 
-        report_file = f".test_report.{uuid.uuid4().hex}.xml"
-
-        import sys
+        report_file = f"/tmp/.test_report.{uuid.uuid4().hex}.xml"
 
         try:
             # We don't strictly care about the return code here (pytest returns 1 on failure),
             # because we will parse the XML it spits out.
-            subprocess.run(
-                [sys.executable, "-m", "pytest"] + targets + [f"--junitxml={report_file}"],
-                capture_output=True,
-                text=True,
-            )
+            cmd_str = f"python -m pytest {' '.join(targets)} --junitxml={report_file}"
+            self.env.run_bash(cmd_str, timeout=300)
         except FileNotFoundError:
             return format_error(
                 reason="pytest is not installed or not in PATH.",
@@ -47,7 +40,9 @@ class RunTestsTool(BaseTool):
                 hint="Check if the target path exists.",
             )
 
-        if not os.path.exists(report_file):
+        try:
+            xml_content = self.env.read_file(report_file)
+        except Exception:
             return format_error(
                 reason="Pytest did not generate the XML report.",
                 attempted=f"run_tests(targets={targets})",
@@ -55,8 +50,7 @@ class RunTestsTool(BaseTool):
             )
 
         try:
-            tree = ET.parse(report_file)
-            root = tree.getroot()
+            root = ET.fromstring(xml_content)
 
             # JUnit XML structure depends on whether it's a single <testsuite> or multiple nested.
             # Usually pytest puts everything under a top-level <testsuites> or <testsuite>.
@@ -113,7 +107,9 @@ class RunTestsTool(BaseTool):
                 hint="The test suite output may be malformed.",
             )
         finally:
-            if os.path.exists(report_file):
-                os.remove(report_file)
+            try:
+                self.env.run_bash(f"rm -f {report_file}", timeout=10)
+            except Exception:
+                pass
 
         return truncate_output(final_output)

@@ -1,4 +1,5 @@
-from tools.registry import execute_tool, get_openai_tools
+from tools.environment import LocalEnvironment
+from tools.registry import TOOLS, execute_tool, get_openai_tools, initialize_tools
 from tools.utils import format_error, truncate_output
 
 
@@ -39,3 +40,10 @@ def test_format_error():
     assert "ERROR: Test reason" in err
     assert "ATTEMPTED: Test attempt" in err
     assert "HINT: Test hint" in err
+
+
+def test_initialize_tools():
+    env = LocalEnvironment()
+    initialize_tools(env)
+    for tool in TOOLS:
+        assert tool.env is env

@@ -22,13 +22,7 @@ class BashTool(BaseTool):
         from tools.utils import format_error, truncate_output
 
         try:
-            result = subprocess.run(
-                command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=timeout,  # Prevent infinite loops / interactive hangs
-            )
+            result = self.env.run_bash(command, timeout)
         except subprocess.TimeoutExpired:
             return format_error(
                 reason=f"Command timed out after {timeout} seconds.",

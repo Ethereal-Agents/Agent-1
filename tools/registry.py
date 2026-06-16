@@ -2,6 +2,7 @@ from typing import Any, Dict, List
 
 from tools.base import BaseTool
 from tools.bash import BashTool
+from tools.environment import ExecutionEnvironment
 from tools.file_ops import EditTool, ReadFileTool
 from tools.run_tests import RunTestsTool
 from tools.search import CodeSearchTool
@@ -24,6 +25,12 @@ TOOL_MAP: Dict[str, BaseTool] = {tool.name: tool for tool in TOOLS}
 def get_openai_tools() -> List[Dict[str, Any]]:
     """Returns the list of tools formatted for the LiteLLM/OpenAI API."""
     return [tool.to_openai_tool() for tool in TOOLS]
+
+
+def initialize_tools(env: ExecutionEnvironment):
+    """Injects the given environment into all registered tools."""
+    for tool in TOOLS:
+        tool.env = env
 
 
 def execute_tool(name: str, arguments: Dict[str, Any]) -> str:
