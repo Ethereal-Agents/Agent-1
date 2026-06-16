@@ -4,9 +4,7 @@ import sqlite3
 from typing import List, Dict, Any
 from datetime import datetime
 
-# Define the base runs directory
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-RUNS_DIR = os.path.join(BASE_DIR, "runs")
+from config import RUNS_DIR
 DB_PATH = os.path.join(RUNS_DIR, "metrics.db")
 
 def init_db():
