@@ -1,5 +1,9 @@
 import os
 import yaml
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Allow override via environment variable, otherwise default to configs/default.yaml
@@ -21,7 +25,12 @@ DEFAULT_MODEL = _config.get("agent", {}).get("default_model", "claude-3-5-haiku-
 # Paths
 RUNS_DIR = os.path.join(BASE_DIR, _config.get("paths", {}).get("runs_dir", "runs"))
 SYSTEM_PROMPT_PATH = os.path.join(BASE_DIR, _config.get("paths", {}).get("system_prompt_file", "prompts/system_prompt.txt"))
+COMPACTION_PROMPT_PATH = os.path.join(BASE_DIR, _config.get("paths", {}).get("compaction_prompt_file", "prompts/compaction_prompt.txt"))
 
 def get_system_prompt() -> str:
     with open(SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
+        return f.read()
+
+def get_compaction_prompt() -> str:
+    with open(COMPACTION_PROMPT_PATH, "r", encoding="utf-8") as f:
         return f.read()

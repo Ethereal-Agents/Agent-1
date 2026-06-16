@@ -1,8 +1,9 @@
 agent:
-  max_steps: 30
+  max_steps: 100
   max_submissions: 3
-  compaction_threshold: 15
-  default_model: "claude-3-5-haiku-20241022"
+  compaction_threshold: 100
+  default_model: "gemini/gemini-3.1-flash-lite"
 paths:
   runs_dir: "runs"
   system_prompt_file: "prompts/system_prompt.txt"
+  compaction_prompt_file: "prompts/compaction_prompt.txt"
