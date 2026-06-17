@@ -33,7 +33,8 @@ def test_code_search_invalid_dir():
     tool = CodeSearchTool()
     result = tool.run(query="def", directory="does_not_exist_xyz123")
 
-    assert "ERROR: Directory 'does_not_exist_xyz123' not found." in result
+    assert "Ripgrep failed with exit code 2" in result
+    assert "No such file or directory" in result
 
 
 def test_code_search_invalid_regex(temp_repo):
