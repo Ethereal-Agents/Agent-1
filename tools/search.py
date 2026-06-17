@@ -1,6 +1,10 @@
+import shlex
+import subprocess
+
 from pydantic import BaseModel, Field
 
 from tools.base import BaseTool
+from tools.utils import format_error, truncate_output
 
 
 class CodeSearchArgs(BaseModel):
@@ -16,13 +20,7 @@ class CodeSearchTool(BaseTool):
     args_schema = CodeSearchArgs
 
     def run(self, query: str, directory: str = ".", **kwargs) -> str:
-        import subprocess
-
-        from tools.utils import format_error, truncate_output
-
         try:
-            import shlex
-
             # We must escape the arguments since self.env.run_bash uses shell=True
             query_esc = shlex.quote(query)
             dir_esc = shlex.quote(directory)

@@ -1,6 +1,9 @@
+import subprocess
+
 from pydantic import BaseModel, Field
 
 from tools.base import BaseTool
+from tools.utils import format_error, truncate_output
 
 
 class BashArgs(BaseModel):
@@ -17,10 +20,6 @@ class BashTool(BaseTool):
     args_schema = BashArgs
 
     def run(self, command: str, timeout: int = 120, **kwargs) -> str:
-        import subprocess
-
-        from tools.utils import format_error, truncate_output
-
         try:
             result = self.env.run_bash(command, timeout)
         except subprocess.TimeoutExpired:

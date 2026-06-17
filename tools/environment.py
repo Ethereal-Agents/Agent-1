@@ -48,6 +48,15 @@ class DockerEnvironment(ExecutionEnvironment):
     ):
         if docker is None:
             raise ImportError("The 'docker' python package is required. Run 'uv add docker'.")
+
+        try:
+            subprocess.run(["docker", "info"], check=True, capture_output=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            raise EnvironmentError(
+                "Docker Engine is required for the sandboxed environment but is not running. "
+                "Please start Docker or configure the agent to use LocalEnvironment."
+            )
+
         self.client = docker.from_env()
         self._owns_container = False
 

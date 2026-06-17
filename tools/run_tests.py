@@ -1,6 +1,11 @@
+import subprocess
+import uuid
+import xml.etree.ElementTree as ET
+
 from pydantic import BaseModel, Field
 
 from tools.base import BaseTool
+from tools.utils import format_error, truncate_output
 
 
 class RunTestsArgs(BaseModel):
@@ -15,12 +20,6 @@ class RunTestsTool(BaseTool):
     args_schema = RunTestsArgs
 
     def run(self, targets: list[str], **kwargs) -> str:
-        import subprocess
-        import uuid
-        import xml.etree.ElementTree as ET
-
-        from tools.utils import format_error, truncate_output
-
         report_file = f"/tmp/.test_report.{uuid.uuid4().hex}.xml"
 
         try:
