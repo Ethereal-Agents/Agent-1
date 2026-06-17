@@ -579,8 +579,6 @@ wheels = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "comm"
 version = "0.2.3"
 source = { registry = "https://pypi.org/simple" }
@@ -672,7 +670,6 @@ wheels = [
 ]
 
 [[package]]
->>>>>>> main
 name = "coverage"
 version = "7.14.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3179,8 +3176,6 @@ wheels = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -3193,7 +3188,6 @@ wheels = [
 ]
 
 [[package]]
->>>>>>> main
 name = "python-dotenv"
 version = "1.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3717,8 +3711,6 @@ wheels = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "seaborn"
 version = "0.13.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3751,7 +3743,6 @@ wheels = [
 ]
 
 [[package]]
->>>>>>> main
 name = "shellingham"
 version = "1.5.4"
 source = { registry = "https://pypi.org/simple" }
@@ -3989,8 +3980,6 @@ wheels = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "tornado"
 version = "6.5.7"
 source = { registry = "https://pypi.org/simple" }
@@ -4008,7 +3997,6 @@ wheels = [
 ]
 
 [[package]]
->>>>>>> main
 name = "tqdm"
 version = "4.68.2"
 source = { registry = "https://pypi.org/simple" }
