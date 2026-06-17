@@ -13,3 +13,6 @@ htmlcov/
 *.egg-info/
 __pycache__/
 *.pyc
+
+# Data
+runs/
