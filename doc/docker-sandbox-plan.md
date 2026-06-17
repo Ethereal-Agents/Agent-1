@@ -23,20 +23,13 @@ We defined an abstract `ExecutionEnvironment` class with implementations for dif
 
 ## 3. Component Design
 
-### `config.toml`
-A unified configuration file determining how the tools behave at runtime.
-```toml
-[execution]
-mode = "docker" # "local", "docker", "docker-existing"
-timeout_seconds = 120
+### `main.py` CLI Integration
+The environment is initialized dynamically via the main entrypoint using CLI arguments:
+- `--env {local,docker}`
+- `--docker-image`
+- `--docker-container`
 
-[docker]
-base_image = "python:3.11-slim"
-# Native setup script executed inside the sandbox upon creation
-setup_command = "pip install pytest" 
-# If target_container is populated, we skip creation and attach directly
-target_container = "" 
-```
+The entrypoint parses these arguments, instantiates the proper environment, injects it into all tools via `initialize_tools()`, and wraps execution in a `try...finally` block to guarantee graceful `cleanup()` of any temporary Docker containers upon exit.
 
 ### `tools/environment.py`
 The concrete abstraction layer powering all operations.
@@ -69,6 +62,8 @@ Throughout the implementation, we addressed several critical architectural chall
    - **Edge Case Resolved:** The `RunTestsTool` originally attempted to run `sys.executable -m pytest` and check `os.path.exists()` for the generated XML file. Both of these leaked the host Mac's system paths into the container. We refactored the tool to execute the generic `python -m pytest` inside the container, generate the XML report to `/tmp/`, and extract it via `self.env.read_file()`.
 4. **Timeouts inside Docker**
    - **Decision:** Strict Host-enforced Timeouts. The timeout logic (e.g., 120s) is enforced by the Python `subprocess` wrapper running on the host Mac that executes the `docker exec` CLI command. This prevents infinite hanging and guarantees deterministic execution times.
+5. **Environment-Aware System Prompts**
+   - **Decision:** Instead of masking generic Docker `stderr` outputs or writing brittle regex translations to trick the LLM into thinking it's not in a container, we implemented a `get_system_prompt_addition()` method. This dynamically injects a string into the LLM's system prompt (e.g. "You are running in a Docker container, file ops are proxied via docker cp"). This transparently informs the LLM exactly how to interpret any leaked abstraction errors without us having to write error-translation logic.
 
 ## 5. Tradeoffs Summary
 - **Local:** Fastest, easiest to debug, but zero security against malicious LLM actions.
