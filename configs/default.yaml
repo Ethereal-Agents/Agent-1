@@ -1,0 +1,10 @@
+agent:
+  max_steps: 100
+  max_submissions: 3
+  compaction_threshold: 100
+  default_model: "gemini/gemma-4-31b-it"
+  compaction_model: "gemini/gemini-3.1-flash-lite"
+paths:
+  runs_dir: "runs"
+  system_prompt_file: "prompts/system_prompt.txt"
+  compaction_prompt_file: "prompts/compaction_prompt.txt"
