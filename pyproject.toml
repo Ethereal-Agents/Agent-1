@@ -36,9 +36,6 @@ ignore = ["E501"] # Ignore line too long, as error hint strings often exceed 100
 
 [tool.setuptools.packages.find]
 exclude = ["tests", "doc"]
-<<<<<<< HEAD
-=======
 
 [tool.coverage.run]
 omit = ["trajectory_viewer/*"]
->>>>>>> main
