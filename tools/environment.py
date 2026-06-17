@@ -108,6 +108,10 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
         return subprocess.run(docker_cmd, capture_output=True, text=True, timeout=timeout)
 
     def read_file(self, path: str) -> str:
+        # docker cp resolves relative paths from / instead of the container's working_dir
+        if not path.startswith("/"):
+            path = f"/workspace/{path}"
+
         with tempfile.TemporaryDirectory() as tmpdir:
             local_tar_path = os.path.join(tmpdir, "file.tar")
             # This uses the docker CLI for simplicity, as the python SDK get_archive is slightly more complex
@@ -126,6 +130,10 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
                 return f.read()
 
     def write_file(self, path: str, content: str) -> None:
+        # docker cp resolves relative paths from / instead of the container's working_dir
+        if not path.startswith("/"):
+            path = f"/workspace/{path}"
+
         with tempfile.TemporaryDirectory() as tmpdir:
             local_file_path = os.path.join(tmpdir, os.path.basename(path))
             with open(local_file_path, "w", encoding="utf-8") as f:
