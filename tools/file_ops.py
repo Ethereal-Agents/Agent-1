@@ -33,7 +33,6 @@ class ReadFileTool(BaseTool):
             return format_error(
                 reason=f"Failed to read file: {str(e)}",
                 attempted=f"read_file(path='{path}')",
-                hint="Ensure the file exists and you have permissions to read it.",
             )
 
         total_lines = len(lines)
@@ -108,7 +107,6 @@ class EditTool(BaseTool):
             return format_error(
                 reason=f"Failed to read file: {str(e)}",
                 attempted=f"edit(path='{path}')",
-                hint="Ensure the file exists and you have permissions.",
             )
 
         total_lines = len(lines)
@@ -146,7 +144,6 @@ class EditTool(BaseTool):
             return format_error(
                 reason=f"Failed to write changes: {str(e)}",
                 attempted=f"edit(path='{path}')",
-                hint="Check directory permissions.",
             )
 
         return f"[SUCCESS] Edited {path}.\nApplied diff:\n- {old_str.strip()[:100]}...\n+ {new_str.strip()[:100]}..."

@@ -39,7 +39,6 @@ class CodeSearchTool(BaseTool):
             return format_error(
                 reason=f"Failed to execute ripgrep: {str(e)}",
                 attempted=f"code_search(query='{query}')",
-                hint="A deep system or OS error occurred. Verify your execution environment is functioning correctly.",
             )
 
         if result.returncode == 127:

@@ -38,7 +38,6 @@ class RunTestsTool(BaseTool):
             return format_error(
                 reason=f"Failed to execute pytest: {str(e)}",
                 attempted=f"run_tests(targets={targets})",
-                hint="A deep system or OS error occurred. Verify your execution environment is functioning correctly.",
             )
 
         if result.returncode == 127:
@@ -51,11 +50,7 @@ class RunTestsTool(BaseTool):
         try:
             xml_content = self.env.read_file(report_file)
         except Exception:
-            return format_error(
-                reason="Pytest did not generate the XML report.",
-                attempted=f"run_tests(targets={targets})",
-                hint="Check if the target contains valid tests. It may have failed to collect tests entirely.",
-            )
+            return f"[TEST EXECUTION FAILED]\nPytest did not generate the XML report. The testing framework likely crashed.\n\n<stdout>\n{truncate_output(result.stdout)}\n</stdout>\n<stderr>\n{truncate_output(result.stderr)}\n</stderr>"
 
         try:
             root = ET.fromstring(xml_content)

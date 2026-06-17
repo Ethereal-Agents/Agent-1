@@ -11,9 +11,12 @@ def truncate_output(text: str, max_len: int = 3000) -> str:
     return text[:keep_len] + warning
 
 
-def format_error(reason: str, attempted: str, hint: str) -> str:
+def format_error(reason: str, attempted: str, hint: str = None) -> str:
     """
     Formats all errors into the strict tripartite format required by the 2026 Zylos study,
     preventing LLM retry death-spirals.
     """
-    return f"ERROR: {reason}\nATTEMPTED: {attempted}\nHINT: {hint}"
+    base = f"ERROR: {reason}\nATTEMPTED: {attempted}"
+    if hint:
+        base += f"\nHINT: {hint}"
+    return base

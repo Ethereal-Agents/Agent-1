@@ -63,4 +63,5 @@ def test_run_tests_missing_target():
 def test_run_tests_invalid_flag():
     tool = RunTestsTool()
     result = tool.run(targets=["--this-flag-is-invalid-and-will-break-pytest"])
-    assert "ERROR: Pytest did not generate the XML report." in result
+    assert "[TEST EXECUTION FAILED]" in result
+    assert "error: unrecognized arguments:" in result
