@@ -53,7 +53,6 @@ class CodeSearchTool(BaseTool):
             return format_error(
                 reason=f"Ripgrep failed with exit code {result.returncode}: {result.stderr}",
                 attempted=f"code_search(query='{query}')",
-                hint="Ensure your regex query is validly escaped.",
             )
 
         # Parse the output into XML blocks
