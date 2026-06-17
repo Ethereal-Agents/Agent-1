@@ -48,8 +48,13 @@ class RunTestsTool(BaseTool):
 
         try:
             xml_content = self.env.read_file(report_file)
-        except Exception:
+        except FileNotFoundError:
             return f"[TEST EXECUTION FAILED]\nPytest did not generate the XML report. The testing framework likely crashed.\n\n<stdout>\n{truncate_output(result.stdout)}\n</stdout>\n<stderr>\n{truncate_output(result.stderr)}\n</stderr>"
+        except Exception as e:
+            return format_error(
+                reason=f"Failed to read the generated pytest XML report: {str(e)}",
+                attempted=f"read_file('{report_file}')",
+            )
 
         try:
             root = ET.fromstring(xml_content)
