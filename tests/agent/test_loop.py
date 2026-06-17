@@ -54,7 +54,9 @@ class MockToolCall:
 
 class TestAgentInit:
     def test_agent_init(self, mock_config):
-        agent = Agent(model="test_model", compaction_model="test_compaction_model", instance_id="test_id")
+        agent = Agent(
+            model="test_model", compaction_model="test_compaction_model", instance_id="test_id"
+        )
         assert agent.model == "test_model"
         assert agent.compaction_model == "test_compaction_model"
         assert agent.instance_id == "test_id"
