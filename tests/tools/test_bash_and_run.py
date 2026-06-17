@@ -66,25 +66,31 @@ def test_run_tests_invalid_flag():
     assert "[TEST EXECUTION FAILED]" in result
     assert "error: unrecognized arguments:" in result
 
+
 def test_run_tests_timeout():
-    from unittest.mock import MagicMock
     import subprocess
+    from unittest.mock import MagicMock
+
     tool = RunTestsTool()
     tool.env.run_bash = MagicMock(side_effect=subprocess.TimeoutExpired("pytest", 300))
     result = tool.run(targets=[])
     assert "Pytest execution timed out after 300 seconds." in result
 
+
 def test_run_tests_127():
-    from unittest.mock import MagicMock
     import subprocess
+    from unittest.mock import MagicMock
+
     tool = RunTestsTool()
     mock_result = subprocess.CompletedProcess(args="pytest", returncode=127, stdout="", stderr="")
     tool.env.run_bash = MagicMock(return_value=mock_result)
     result = tool.run(targets=[])
     assert "pytest or python is not installed or not in PATH." in result
 
+
 def test_run_tests_xml_parse_error(temp_test_file):
     from unittest.mock import MagicMock
+
     tool = RunTestsTool()
     tool.env.read_file = MagicMock(return_value="<invalid><xml")
     result = tool.run(targets=[temp_test_file])

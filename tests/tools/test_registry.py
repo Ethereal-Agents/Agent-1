@@ -48,14 +48,17 @@ def test_initialize_tools():
     for tool in TOOLS:
         assert tool.env is env
 
+
 def test_execute_tool_invalid_args():
     # command should be a string, passing an int should throw Pydantic ValidationError
     # which is caught by the generic except Exception in execute_tool
     result = execute_tool("bash", {"command": 123})
     assert "ERROR: Failed to execute 'bash'" in result
 
+
 def test_get_env_system_prompt():
     from tools.registry import get_env_system_prompt
+
     env = LocalEnvironment()
     initialize_tools(env)
     prompt = get_env_system_prompt()

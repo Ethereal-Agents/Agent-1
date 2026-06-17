@@ -42,17 +42,21 @@ def test_code_search_invalid_regex(temp_repo):
     result = tool.run(query="[", directory=temp_repo)
     assert "Ripgrep failed with exit code 2" in result
 
+
 def test_code_search_timeout():
-    from unittest.mock import MagicMock
     import subprocess
+    from unittest.mock import MagicMock
+
     tool = CodeSearchTool()
     tool.env.run_bash = MagicMock(side_effect=subprocess.TimeoutExpired("rg", 120))
     result = tool.run(query="test", directory=".")
     assert "Ripgrep search timed out after 120 seconds." in result
 
+
 def test_code_search_127():
-    from unittest.mock import MagicMock
     import subprocess
+    from unittest.mock import MagicMock
+
     tool = CodeSearchTool()
     mock_result = subprocess.CompletedProcess(args="rg", returncode=127, stdout="", stderr="")
     tool.env.run_bash = MagicMock(return_value=mock_result)
