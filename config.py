@@ -24,6 +24,7 @@ MAX_STEPS = _config.get("agent", {}).get("max_steps", 30)
 MAX_SUBMISSIONS = _config.get("agent", {}).get("max_submissions", 3)
 COMPACTION_THRESHOLD = _config.get("agent", {}).get("compaction_threshold", 15)
 DEFAULT_MODEL = _config.get("agent", {}).get("default_model", "claude-3-5-haiku-20241022")
+COMPACTION_MODEL = _config.get("agent", {}).get("compaction_model", "gemini/gemini-3.1-flash-lite")
 
 # Paths
 RUNS_DIR = os.path.join(BASE_DIR, _config.get("paths", {}).get("runs_dir", "runs"))

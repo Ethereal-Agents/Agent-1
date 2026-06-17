@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 import litellm
 
 from config import (
+    COMPACTION_MODEL,
     COMPACTION_THRESHOLD,
     DEFAULT_MODEL,
     MAX_STEPS,
@@ -19,11 +20,17 @@ from tools.registry import execute_tool, get_openai_tools
 
 
 class Agent:
-    def __init__(self, model: str = DEFAULT_MODEL, instance_id: str = None):
+    def __init__(
+        self,
+        model: str = DEFAULT_MODEL,
+        compaction_model: str = COMPACTION_MODEL,
+        instance_id: str = None,
+    ):
         if not instance_id:
             instance_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
 
         self.model = model
+        self.compaction_model = compaction_model
         self.instance_id = instance_id
         self.system_prompt = get_system_prompt()
         self.compaction_prompt = get_compaction_prompt()
@@ -234,9 +241,8 @@ class Agent:
             ]
 
             try:
-                print("Generating summary for compacted history...")
-                # We use the agent's current model, but in a production system you might want a cheaper model
-                response = litellm.completion(model=self.model, messages=summary_prompt)
+                print(f"Generating summary for compacted history using {self.compaction_model}...")
+                response = litellm.completion(model=self.compaction_model, messages=summary_prompt)
                 summary_text = response.choices[0].message.content
 
                 self._track_metrics(response)
