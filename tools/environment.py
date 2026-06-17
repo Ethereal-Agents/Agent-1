@@ -50,7 +50,7 @@ class LocalEnvironment(ExecutionEnvironment):
         )
 
 
-class DockerEnvironment(ExecutionEnvironment):
+class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
     def __init__(
         self,
         image: str = None,

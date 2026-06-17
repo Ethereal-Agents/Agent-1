@@ -16,7 +16,7 @@ class RunTestsArgs(BaseModel):
 
 class RunTestsTool(BaseTool):
     name = "run_tests"
-    description = "Runs the test suite and returns structured execution results."
+    description = "Runs the test suite using pytest and returns structured execution results. Note: This tool specifically expects and runs pytest."
     args_schema = RunTestsArgs
 
     def run(self, targets: list[str], **kwargs) -> str:
