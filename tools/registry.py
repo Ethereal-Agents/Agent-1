@@ -45,3 +45,10 @@ def execute_tool(name: str, arguments: Dict[str, Any]) -> str:
         return tool.run(**validated_args.model_dump())
     except Exception as e:
         return f"ERROR: Failed to execute '{name}'. Reason: {str(e)}"
+
+
+def get_env_system_prompt() -> str:
+    """Returns the system prompt addition from the active environment, if any."""
+    if TOOLS and hasattr(TOOLS[0], "env") and TOOLS[0].env:
+        return TOOLS[0].env.get_system_prompt_addition()
+    return ""

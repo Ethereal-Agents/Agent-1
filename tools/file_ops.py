@@ -27,7 +27,7 @@ class ReadFileTool(BaseTool):
             return format_error(
                 reason=f"File '{path}' not found or is not a file.",
                 attempted=f"read_file(path='{path}')",
-                hint="Use the bash tool with 'ls' to check the directory contents and verify the file path.",
+                hint="File not found. Use the bash tool with 'ls' or 'find' to verify the exact path.",
             )
         except Exception as e:
             return format_error(
@@ -101,7 +101,7 @@ class EditTool(BaseTool):
             return format_error(
                 reason=f"File '{path}' not found.",
                 attempted=f"edit(path='{path}')",
-                hint="Use the read_file or code_search tool to find the correct file path.",
+                hint="File not found. Use the bash tool with 'ls' or 'find' to verify the exact path.",
             )
         except Exception as e:
             return format_error(

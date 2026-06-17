@@ -22,6 +22,11 @@ class ExecutionEnvironment(ABC):
     def write_file(self, path: str, content: str) -> None:
         pass
 
+    @abstractmethod
+    def get_system_prompt_addition(self) -> str:
+        """Returns environment-specific text to be appended to the LLM's system prompt."""
+        pass
+
 
 class LocalEnvironment(ExecutionEnvironment):
     def run_bash(self, cmd: str, timeout: int) -> subprocess.CompletedProcess:
@@ -36,6 +41,13 @@ class LocalEnvironment(ExecutionEnvironment):
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             f.write(content)
+
+    def get_system_prompt_addition(self) -> str:
+        return (
+            "ENVIRONMENT CONTEXT:\n"
+            "You are executing commands natively on a Local Mac host. Expect standard macOS OS/Bash errors. "
+            "Be extremely careful not to modify or delete critical system files outside of the workspace."
+        )
 
 
 class DockerEnvironment(ExecutionEnvironment):
@@ -128,3 +140,12 @@ class DockerEnvironment(ExecutionEnvironment):
             )
             if result.returncode != 0:
                 raise RuntimeError(f"docker cp failed: {result.stderr}")
+
+    def get_system_prompt_addition(self) -> str:
+        return (
+            "ENVIRONMENT CONTEXT:\n"
+            "You are executing inside a sandboxed Linux Docker container. Your workspace is mounted at `/workspace`. "
+            "File operations (read/write) are proxied via `docker cp`. If you encounter Docker-related errors "
+            "(e.g., 'docker cp failed: Error response from daemon...'), they refer to the container's isolated file system. "
+            "Standard Linux behavior applies within."
+        )

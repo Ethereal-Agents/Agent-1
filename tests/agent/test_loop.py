@@ -60,7 +60,7 @@ class TestAgentInit:
         assert agent.model == "test_model"
         assert agent.compaction_model == "test_compaction_model"
         assert agent.instance_id == "test_id"
-        assert agent.system_prompt == "sys prompt"
+        assert agent.system_prompt.startswith("sys prompt")
         assert agent.compaction_prompt == "compaction prompt"
         assert agent.step_count == 0
         assert agent.submit_count == 0

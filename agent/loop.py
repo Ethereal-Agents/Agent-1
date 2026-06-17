@@ -16,7 +16,7 @@ from config import (
     get_system_prompt,
 )
 from memory.trajectory import save_trajectory
-from tools.registry import execute_tool, get_openai_tools
+from tools.registry import execute_tool, get_env_system_prompt, get_openai_tools
 
 
 class Agent:
@@ -33,6 +33,11 @@ class Agent:
         self.compaction_model = compaction_model
         self.instance_id = instance_id
         self.system_prompt = get_system_prompt()
+
+        env_prompt = get_env_system_prompt()
+        if env_prompt:
+            self.system_prompt += f"\n\n{env_prompt}"
+
         self.compaction_prompt = get_compaction_prompt()
         self.history: List[Dict[str, Any]] = []
 
