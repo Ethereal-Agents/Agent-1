@@ -35,11 +35,28 @@ def test_init_db(mock_db):
     conn.close()
 
 
-def test_save_trajectory(mock_db):
+def test_append_trajectory_step(mock_db):
     test_runs_dir, test_db_path = mock_db
-
     instance_id = "test_123"
-    history = [{"role": "user", "content": "hello"}, {"role": "assistant", "content": "world"}]
+    step1 = {"role": "user", "content": "hello"}
+    step2 = {"role": "assistant", "content": "world"}
+
+    trajectory.append_trajectory_step(instance_id, step1)
+    trajectory.append_trajectory_step(instance_id, step2)
+
+    traj_path = test_runs_dir / instance_id / "trajectory.jsonl"
+    assert traj_path.exists()
+
+    with open(traj_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+        assert len(lines) == 2
+        assert json.loads(lines[0]) == step1
+        assert json.loads(lines[1]) == step2
+
+
+def test_save_metrics(mock_db):
+    test_runs_dir, test_db_path = mock_db
+    instance_id = "test_123"
     metrics = {
         "status": "success",
         "total_steps": 2,
@@ -48,20 +65,8 @@ def test_save_trajectory(mock_db):
         "duration_seconds": 1.5,
     }
 
-    # Actually run save_trajectory
-    trajectory.save_trajectory(instance_id, history, metrics)
+    trajectory.save_metrics(instance_id, metrics)
 
-    # 1. Verify JSONL
-    traj_path = test_runs_dir / instance_id / "trajectory.jsonl"
-    assert traj_path.exists()
-
-    with open(traj_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-        assert len(lines) == 2
-        assert json.loads(lines[0]) == history[0]
-        assert json.loads(lines[1]) == history[1]
-
-    # 2. Verify SQLite DB
     conn = sqlite3.connect(str(test_db_path))
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM metrics WHERE instance_id=?", (instance_id,))
@@ -69,9 +74,8 @@ def test_save_trajectory(mock_db):
     conn.close()
 
     assert row is not None
-    # row format: instance_id, timestamp, status, total_steps, total_tokens, cost, duration_seconds
     assert row[0] == instance_id
-    assert isinstance(row[1], str)  # timestamp
+    assert isinstance(row[1], str)
     assert row[2] == "success"
     assert row[3] == 2
     assert row[4] == 100
@@ -79,14 +83,12 @@ def test_save_trajectory(mock_db):
     assert row[6] == 1.5
 
 
-def test_save_trajectory_default_metrics(mock_db):
+def test_save_metrics_default_metrics(mock_db):
     test_runs_dir, test_db_path = mock_db
-
     instance_id = "test_default"
-    history = []
-    metrics = {}  # Empty metrics
+    metrics = {}
 
-    trajectory.save_trajectory(instance_id, history, metrics)
+    trajectory.save_metrics(instance_id, metrics)
 
     conn = sqlite3.connect(str(test_db_path))
     cursor = conn.cursor()

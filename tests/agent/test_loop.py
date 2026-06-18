@@ -11,7 +11,9 @@ def mock_config():
     with (
         patch("agent.loop.get_system_prompt", return_value="sys prompt"),
         patch("agent.loop.get_compaction_prompt", return_value="compaction prompt"),
+        patch("agent.loop.get_test_failure_prompt", return_value="TESTS FAILED"),
         patch("agent.loop.COMPACTION_THRESHOLD", 15),
+        patch("agent.loop.append_trajectory_step"),
     ):
         yield
 
@@ -60,7 +62,7 @@ class TestAgentInit:
         assert agent.model == "test_model"
         assert agent.compaction_model == "test_compaction_model"
         assert agent.instance_id == "test_id"
-        assert agent.system_prompt == "sys prompt"
+        assert agent.system_prompt.startswith("sys prompt")
         assert agent.compaction_prompt == "compaction prompt"
         assert agent.step_count == 0
         assert agent.submit_count == 0
@@ -295,6 +297,14 @@ class TestAgentMemory:
 
 
 class TestAgentRun:
+    def test_append_history(self, mock_config):
+        agent = Agent(instance_id="test_run_001")
+        with patch("agent.loop.append_trajectory_step") as mock_append:
+            agent._append_history({"role": "user", "content": "hi"})
+            assert len(agent.history) == 1
+            assert len(agent.full_history) == 1
+            mock_append.assert_called_once_with("test_run_001", {"role": "user", "content": "hi"})
+
     def test_finalize_run(self, mock_config):
         agent = Agent(instance_id="test_run_001")
         agent.step_count = 5
@@ -304,19 +314,18 @@ class TestAgentRun:
 
         with (
             patch("agent.loop.time.time", return_value=10.0),
-            patch("agent.loop.save_trajectory") as mock_save,
+            patch("agent.loop.save_metrics") as mock_save,
         ):
             agent._finalize_run()
 
             mock_save.assert_called_once()
             args = mock_save.call_args[0]
             assert args[0] == "test_run_001"
-            assert args[1] == agent.history
-            assert args[2]["status"] == "completed"
-            assert args[2]["total_steps"] == 5
-            assert args[2]["total_tokens"] == 500
-            assert args[2]["cost"] == 0.5
-            assert args[2]["duration_seconds"] == 10.0
+            assert args[1]["status"] == "completed"
+            assert args[1]["total_steps"] == 5
+            assert args[1]["total_tokens"] == 500
+            assert args[1]["cost"] == 0.5
+            assert args[1]["duration_seconds"] == 10.0
 
     def test_run_loop_max_steps(self, mock_config):
         agent = Agent()

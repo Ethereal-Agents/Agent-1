@@ -28,23 +28,23 @@ def init_db():
     conn.close()
 
 
-def save_trajectory(instance_id: str, history: List[Dict[str, Any]], metrics: Dict[str, Any]):
+def append_trajectory_step(instance_id: str, step: Dict[str, Any]):
     """
-    Saves the full history to a JSONL file and logs high-level metrics to SQLite.
-    Follows the SWE-agent and OpenHands pattern of making raw trajectories highly portable.
+    Appends a single step to the trajectory JSONL file.
     """
     os.makedirs(RUNS_DIR, exist_ok=True)
-
-    # 1. Save Trajectory as JSONL
     instance_dir = os.path.join(RUNS_DIR, instance_id)
     os.makedirs(instance_dir, exist_ok=True)
 
     traj_path = os.path.join(instance_dir, "trajectory.jsonl")
-    with open(traj_path, "w", encoding="utf-8") as f:
-        for step in history:
-            f.write(json.dumps(step) + "\n")
+    with open(traj_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(step) + "\n")
 
-    # 2. Save Metrics to SQLite for dashboarding
+
+def save_metrics(instance_id: str, metrics: Dict[str, Any]):
+    """
+    Logs high-level metrics to SQLite.
+    """
     init_db()
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -68,5 +68,4 @@ def save_trajectory(instance_id: str, history: List[Dict[str, Any]], metrics: Di
     conn.commit()
     conn.close()
 
-    print(f"[Logging] Trajectory saved to {traj_path}")
     print(f"[Logging] Metrics recorded to SQLite for instance {instance_id}")

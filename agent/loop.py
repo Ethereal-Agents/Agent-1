@@ -14,9 +14,10 @@ from config import (
     MAX_SUBMISSIONS,
     get_compaction_prompt,
     get_system_prompt,
+    get_test_failure_prompt,
 )
-from memory.trajectory import save_trajectory
-from tools.registry import execute_tool, get_openai_tools
+from memory.trajectory import append_trajectory_step, save_metrics
+from tools.registry import execute_tool, get_env_system_prompt, get_openai_tools
 
 
 class Agent:
@@ -33,8 +34,14 @@ class Agent:
         self.compaction_model = compaction_model
         self.instance_id = instance_id
         self.system_prompt = get_system_prompt()
+
+        env_prompt = get_env_system_prompt()
+        if env_prompt:
+            self.system_prompt += f"\n\n{env_prompt}"
+
         self.compaction_prompt = get_compaction_prompt()
         self.history: List[Dict[str, Any]] = []
+        self.full_history: List[Dict[str, Any]] = []
 
         self.step_count = 0
         self.submit_count = 0
@@ -42,12 +49,17 @@ class Agent:
         self.cumulative_cost = 0.0
         self.start_time = 0.0
 
+    def _append_history(self, message: Dict[str, Any]):
+        self.history.append(message)
+        self.full_history.append(message)
+        append_trajectory_step(self.instance_id, message)
+
     def run(self, issue_description: str) -> List[Dict[str, Any]]:
         print(f"Starting recall-agent on model: {self.model}")
         self.start_time = time.time()
 
         # Initialize conversation history with Checkpoints 1 and 2 for Prompt Caching
-        self.history = [
+        initial_history = [
             {
                 "role": "system",
                 "content": [
@@ -69,6 +81,11 @@ class Agent:
                 ],
             },
         ]
+
+        self.history = []
+        self.full_history = []
+        for step in initial_history:
+            self._append_history(step)
 
         while self.step_count < MAX_STEPS:
             print(f"\n--- Step {self.step_count + 1} ---")
@@ -96,7 +113,7 @@ class Agent:
             print("\n[HARD STOP] Max steps reached.")
 
         self._finalize_run()
-        return self.history
+        return self.full_history
 
     def _call_llm(self):
         import copy
@@ -132,7 +149,7 @@ class Agent:
         message = response.choices[0].message
 
         # Append assistant's response exactly as provided by the API
-        self.history.append(message.model_dump(exclude_none=True))
+        self._append_history(message.model_dump(exclude_none=True))
         return message
 
     def _process_tools(self, tool_calls) -> bool:
@@ -152,7 +169,7 @@ class Agent:
                 if self.submit_count >= MAX_SUBMISSIONS:
                     print(f"\n[HARD STOP] Submission cap ({MAX_SUBMISSIONS}) reached. Halting.")
                     observation = "[HARD STOP] Submission limit reached. Task failed."
-                    self.history.append(
+                    self._append_history(
                         {
                             "role": "tool",
                             "tool_call_id": tool_call.id,
@@ -169,7 +186,7 @@ class Agent:
                 if "<status>PASSED</status>" in test_results:
                     print("\n[SUCCESS] Tests passed! Patch successful.")
                     observation = "[SUCCESS] All tests passed! Please provide a final summary of what you fixed to the user, and do not call any more tools."
-                    self.history.append(
+                    self._append_history(
                         {
                             "role": "tool",
                             "tool_call_id": tool_call.id,
@@ -180,10 +197,8 @@ class Agent:
                     # We let the loop continue so the LLM can generate a final conversational summary.
                 else:
                     print("\n[FAILURE] Tests failed. Feeding back to agent for reflection.")
-                    observation = (
-                        f"TESTS FAILED. Please reflect and try again. Logs:\n{test_results}"
-                    )
-                    self.history.append(
+                    observation = get_test_failure_prompt(test_results)
+                    self._append_history(
                         {
                             "role": "tool",
                             "tool_call_id": tool_call.id,
@@ -197,7 +212,7 @@ class Agent:
             # --- STANDARD TOOLS ---
             observation = execute_tool(tool_name, tool_args)
 
-            self.history.append(
+            self._append_history(
                 {
                     "role": "tool",
                     "tool_call_id": tool_call.id,
@@ -282,7 +297,7 @@ class Agent:
             "duration_seconds": duration,
         }
 
-        save_trajectory(self.instance_id, self.history, metrics)
+        save_metrics(self.instance_id, metrics)
 
 
 def run_agent(

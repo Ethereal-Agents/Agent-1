@@ -15,3 +15,10 @@ def test_get_compaction_prompt():
         result = config.get_compaction_prompt()
         m.assert_called_once_with(config.COMPACTION_PROMPT_PATH, "r", encoding="utf-8")
         assert result == "mock_compaction_prompt"
+
+
+def test_get_test_failure_prompt():
+    with patch("builtins.open", mock_open(read_data="mock_failure {test_results}")) as m:
+        result = config.get_test_failure_prompt("logs")
+        m.assert_called_once_with(config.TEST_FAILURE_PROMPT_PATH, "r", encoding="utf-8")
+        assert result == "mock_failure logs"
