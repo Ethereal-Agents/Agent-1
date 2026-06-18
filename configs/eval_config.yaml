@@ -1,0 +1,17 @@
+eval:
+  dataset: "princeton-nlp/SWE-bench_Verified"
+  split: "test"
+  max_workers_grading: 4
+  max_workers_inference: 2
+  timeout_per_task: 1800      # seconds (30 min)
+  output_dir: "eval_results"
+  namespace: ""               # set empty for ARM/OrbStack local image builds
+
+agent:
+  model: "gemini/gemma-4-31b-it"
+  max_steps: 100
+  max_submissions: 3
+
+budget:
+  warn_threshold_usd: 5.0
+  warn_interval_pct: [50, 80, 100]

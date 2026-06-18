@@ -1,4 +1,5 @@
 import json
+import os
 import time
 import uuid
 from datetime import datetime
@@ -276,18 +277,16 @@ class Agent:
             pass  # Fails gracefully if the model is too new or cost is unknown
 
     def _finalize_run(self):
-        duration = time.time() - self.start_time
-
-        # Basic metrics
         metrics = {
             "status": "completed" if self.step_count < MAX_STEPS else "max_steps_reached",
             "total_steps": self.step_count,
             "total_tokens": self.cumulative_tokens,
             "cost": self.cumulative_cost,
-            "duration_seconds": duration,
+            "duration_seconds": time.time() - self.start_time,
         }
 
-        save_trajectory(self.instance_id, self.history, metrics)
+        custom_run_dir = os.environ.get("RECALL_RUNS_DIR")
+        save_trajectory(self.instance_id, self.history, metrics, custom_run_dir=custom_run_dir)
 
 
 def run_agent(
