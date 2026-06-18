@@ -256,6 +256,14 @@ class Agent:
             }
             self.history = head + [middle_summary] + tail
 
+            # Log the compaction event to the full trajectory for the viewer
+            compaction_event = {
+                "role": "system",
+                "content": f"[MEMORY COMPACTION TRIGGERED]\nSummarized {len(middle)} messages.\n\nSummary result:\n{summary_text}",
+            }
+            self.full_history.append(compaction_event)
+            append_trajectory_step(self.instance_id, compaction_event)
+
     def _track_metrics(self, response):
         """Extract and accumulate token counts and costs from a litellm response."""
         if hasattr(response, "usage") and response.usage:

@@ -1,6 +1,7 @@
+from unittest.mock import patch
+
 import pytest
-import sys
-from unittest.mock import patch, mock_open
+
 import main
 
 
