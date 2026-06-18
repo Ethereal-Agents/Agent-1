@@ -110,10 +110,10 @@ def main():
     # 3. Start the ReAct Loop
     try:
         if args.model:
-            run_agent(args.issue, model=args.model, instance_id=args.instance_id)
+            run_agent(issue_text, model=args.model, instance_id=args.instance_id)
         else:
             # Falls back to DEFAULT_MODEL in config
-            run_agent(args.issue, instance_id=args.instance_id)
+            run_agent(issue_text, instance_id=args.instance_id)
     finally:
         if hasattr(env, "cleanup"):
             env.cleanup()

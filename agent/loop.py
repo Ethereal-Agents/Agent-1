@@ -17,8 +17,8 @@ from config import (
     get_system_prompt,
     get_test_failure_prompt,
 )
-from tools.registry import execute_tool, get_env_system_prompt, get_openai_tools
 from memory.trajectory import append_trajectory_step, dump_run_config, save_metrics
+from tools.registry import execute_tool, get_env_system_prompt, get_openai_tools
 
 
 class Agent:
