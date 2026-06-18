@@ -158,6 +158,7 @@ class Agent:
                 tool_args = {}
 
             print(f"[Tool Call]: {tool_name}({tool_args})")
+            should_continue = True
 
             # --- INTERCEPT submit_patch ---
             if tool_name == "submit_patch":
@@ -165,49 +166,23 @@ class Agent:
                 if self.submit_count >= MAX_SUBMISSIONS:
                     print(f"\n[HARD STOP] Submission cap ({MAX_SUBMISSIONS}) reached. Halting.")
                     observation = "[HARD STOP] Submission limit reached. Task failed."
-                    self._append_history(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "name": tool_name,
-                            "content": observation,
-                        }
-                    )
-                    return False  # Exit agent loop
-
-                print(f"Verifying patch (Attempt {self.submit_count}/{MAX_SUBMISSIONS})...")
-                # Trigger the actual test suite to verify
-                test_results = execute_tool("run_tests", {"targets": []})
-
-                if "<status>PASSED</status>" in test_results:
-                    print("\n[SUCCESS] Tests passed! Patch successful.")
-                    observation = "[SUCCESS] All tests passed! Please provide a final summary of what you fixed to the user, and do not call any more tools."
-                    self._append_history(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "name": tool_name,
-                            "content": observation,
-                        }
-                    )
-                    # We let the loop continue so the LLM can generate a final conversational summary.
+                    should_continue = False  # Exit agent loop after appending
                 else:
-                    print("\n[FAILURE] Tests failed. Feeding back to agent for reflection.")
-                    observation = get_test_failure_prompt(test_results)
-                    self._append_history(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "name": tool_name,
-                            "content": observation,
-                        }
-                    )
+                    print(f"Verifying patch (Attempt {self.submit_count}/{MAX_SUBMISSIONS})...")
+                    # Trigger the actual test suite to verify
+                    test_results = execute_tool("run_tests", {"targets": []})
 
-                continue
+                    if "<status>PASSED</status>" in test_results:
+                        print("\n[SUCCESS] Tests passed! Patch successful.")
+                        observation = "[SUCCESS] All tests passed! Please provide a final summary of what you fixed to the user, and do not call any more tools."
+                    else:
+                        print("\n[FAILURE] Tests failed. Feeding back to agent for reflection.")
+                        observation = get_test_failure_prompt(test_results)
+            else:
+                # --- STANDARD TOOLS ---
+                observation = execute_tool(tool_name, tool_args)
 
-            # --- STANDARD TOOLS ---
-            observation = execute_tool(tool_name, tool_args)
-
+            # Append the tool's result back to the LLM exactly once
             self._append_history(
                 {
                     "role": "tool",
@@ -216,6 +191,9 @@ class Agent:
                     "content": observation,
                 }
             )
+
+            if not should_continue:
+                return False
 
         return True
 
