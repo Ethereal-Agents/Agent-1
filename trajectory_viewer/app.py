@@ -8,52 +8,47 @@ st.set_page_config(
     page_title="JSONL Trajectory Viewer", layout="wide", initial_sidebar_state="expanded"
 )
 
-st.sidebar.title("📁 File Explorer")
+st.sidebar.title("🏃 Run Explorer")
 
-if "current_dir" not in st.session_state:
-    st.session_state.current_dir = "/Users/ayushdubey/Downloads"
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_RUNS_DIR = os.path.join(PROJECT_ROOT, "runs")
 
+if "runs_dir" not in st.session_state:
+    st.session_state.runs_dir = DEFAULT_RUNS_DIR
 
-def change_dir():
-    sel = st.session_state.dir_selector
-    if sel == "..":
-        st.session_state.current_dir = os.path.dirname(st.session_state.current_dir)
-    elif sel:
-        st.session_state.current_dir = os.path.join(st.session_state.current_dir, sel)
-
-
-new_dir = st.sidebar.text_input("Current Path", value=st.session_state.current_dir)
-if os.path.isdir(new_dir) and new_dir != st.session_state.current_dir:
-    st.session_state.current_dir = new_dir
+new_dir = st.sidebar.text_input("Runs Directory Path", value=st.session_state.runs_dir)
+if new_dir != st.session_state.runs_dir:
+    st.session_state.runs_dir = new_dir
     st.rerun()
 
-current_dir = st.session_state.current_dir
+RUNS_DIR = st.session_state.runs_dir
 
-try:
-    items = os.listdir(current_dir)
-except Exception as e:
-    st.sidebar.error(f"Cannot access directory: {e}")
-    items = []
+if not os.path.exists(RUNS_DIR):
+    st.sidebar.error(f"Runs directory not found at {RUNS_DIR}")
+    st.stop()
 
-dirs = [".."] + sorted(
-    [d for d in items if os.path.isdir(os.path.join(current_dir, d)) and not d.startswith(".")]
-)
-jsonl_files = sorted([f for f in items if f.endswith(".jsonl")])
+run_dirs = [d for d in os.listdir(RUNS_DIR) if os.path.isdir(os.path.join(RUNS_DIR, d))]
+run_dirs = sorted(run_dirs, key=lambda d: os.path.getmtime(os.path.join(RUNS_DIR, d)), reverse=True)
 
-st.sidebar.selectbox(
-    "Navigate to Subdirectory", dirs, key="dir_selector", on_change=change_dir, index=None
-)
+if not run_dirs:
+    st.sidebar.info("No runs found in the runs directory.")
+    st.stop()
 
-st.sidebar.divider()
-
-if jsonl_files:
-    selected_file = st.sidebar.radio("Select JSONL File", jsonl_files)
-    file_path = os.path.join(current_dir, selected_file)
-else:
-    st.sidebar.info("No .jsonl files found in this directory.")
-    file_path = None
+selected_run = st.sidebar.selectbox("Select Run", run_dirs, index=0)
+run_path = os.path.join(RUNS_DIR, selected_run)
+file_path = os.path.join(run_path, "trajectory.jsonl")
+config_path = os.path.join(run_path, "config.json")
 
 st.title("🤖 Trajectory Viewer")
+
+if os.path.exists(config_path):
+    with open(config_path, "r", encoding="utf-8") as f:
+        try:
+            config_data = json.load(f)
+            with st.expander("⚙️ Run Configuration", expanded=False):
+                st.json(config_data)
+        except json.JSONDecodeError:
+            pass
 
 
 def render_assistant_content(content_str):
@@ -163,10 +158,16 @@ if file_path and os.path.exists(file_path):
             content_str = str(content) if content else ""
 
         if role == "system":
-            with st.chat_message("system", avatar="⚙️"):
-                st.markdown("**System Instructions**")
-                with st.expander("Show System Prompt"):
-                    st.markdown(content_str)
+            if "[MEMORY COMPACTION TRIGGERED]" in content_str:
+                with st.chat_message("system", avatar="🗜️"):
+                    st.warning("**Memory Compaction Triggered**")
+                    with st.expander("View Compacted Summary", expanded=False):
+                        st.markdown(content_str.replace("[MEMORY COMPACTION TRIGGERED]\n", ""))
+            else:
+                with st.chat_message("system", avatar="⚙️"):
+                    st.markdown("**System Instructions**")
+                    with st.expander("Show System Prompt"):
+                        st.markdown(content_str)
         elif role == "user":
             with st.chat_message("user", avatar="👤"):
                 st.markdown(content_str)
@@ -203,5 +204,4 @@ if file_path and os.path.exists(file_path):
             with st.chat_message(role):
                 st.markdown(content_str)
 else:
-    if not file_path:
-        st.info("👈 Please select a JSONL file from the sidebar to view its trajectory.")
+    st.info(f"👈 No trajectory.jsonl found in run directory: {selected_run}")
