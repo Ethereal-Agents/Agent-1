@@ -113,20 +113,25 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
             path = f"/workspace/{path}"
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            local_tar_path = os.path.join(tmpdir, "file.tar")
+            local_file_path = os.path.join(tmpdir, os.path.basename(path))
             # This uses the docker CLI for simplicity, as the python SDK get_archive is slightly more complex
             # docker cp container:path dest
-            result = subprocess.run(
-                ["docker", "cp", f"{self.container.id}:{path}", local_tar_path],
-                capture_output=True,
-                text=True,
-            )
+            try:
+                result = subprocess.run(
+                    ["docker", "cp", f"{self.container.id}:{path}", local_file_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+            except subprocess.TimeoutExpired:
+                raise TimeoutError(
+                    f"docker cp timed out after 10 seconds reading '{path}'. The file may be exceptionally large."
+                )
             if result.returncode != 0:
                 if "No such container:path" in result.stderr or "Could not find" in result.stderr:
                     raise FileNotFoundError(f"[Errno 2] No such file or directory: '{path}'")
                 raise RuntimeError(f"docker cp failed: {result.stderr}")
-            # Actually, docker cp to a file directly grabs the file
-            with open(local_tar_path, "r", encoding="utf-8") as f:
+            with open(local_file_path, "r", encoding="utf-8") as f:
                 return f.read()
 
     def write_file(self, path: str, content: str) -> None:
@@ -141,11 +146,16 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
             # Make sure target dir exists in container
             target_dir = os.path.dirname(path)
             self.run_bash(f"mkdir -p {target_dir}", timeout=10)
-            result = subprocess.run(
-                ["docker", "cp", local_file_path, f"{self.container.id}:{path}"],
-                capture_output=True,
-                text=True,
-            )
+
+            try:
+                result = subprocess.run(
+                    ["docker", "cp", local_file_path, f"{self.container.id}:{path}"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+            except subprocess.TimeoutExpired:
+                raise TimeoutError(f"docker cp timed out after 10 seconds writing '{path}'.")
             if result.returncode != 0:
                 raise RuntimeError(f"docker cp failed: {result.stderr}")
 
