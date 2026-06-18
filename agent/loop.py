@@ -12,11 +12,12 @@ from config import (
     DEFAULT_MODEL,
     MAX_STEPS,
     MAX_SUBMISSIONS,
+    _config,
     get_compaction_prompt,
     get_system_prompt,
     get_test_failure_prompt,
 )
-from memory.trajectory import append_trajectory_step, save_metrics
+from memory.trajectory import append_trajectory_step, dump_run_config, save_metrics
 from tools.registry import execute_tool, get_openai_tools
 
 
@@ -44,6 +45,14 @@ class Agent:
         self.cumulative_tokens = 0
         self.cumulative_cost = 0.0
         self.start_time = 0.0
+
+        # Dump configuration for experiment tracking
+        run_config = _config.copy()
+        run_config["runtime_overrides"] = {
+            "model": self.model,
+            "compaction_model": self.compaction_model,
+        }
+        dump_run_config(self.instance_id, run_config)
 
     def _append_history(self, message: Dict[str, Any]):
         self.history.append(message)

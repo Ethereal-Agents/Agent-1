@@ -54,6 +54,21 @@ def test_append_trajectory_step(mock_db):
         assert json.loads(lines[1]) == step2
 
 
+def test_dump_run_config(mock_db):
+    test_runs_dir, test_db_path = mock_db
+    instance_id = "test_config_123"
+    config_data = {"test": "data", "nested": {"key": "value"}}
+
+    trajectory.dump_run_config(instance_id, config_data)
+
+    config_path = test_runs_dir / instance_id / "config.json"
+    assert config_path.exists()
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        loaded = json.load(f)
+        assert loaded == config_data
+
+
 def test_save_metrics(mock_db):
     test_runs_dir, test_db_path = mock_db
     instance_id = "test_123"

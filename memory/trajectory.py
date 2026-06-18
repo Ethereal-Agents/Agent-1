@@ -41,6 +41,19 @@ def append_trajectory_step(instance_id: str, step: Dict[str, Any]):
         f.write(json.dumps(step) + "\n")
 
 
+def dump_run_config(instance_id: str, config_data: Dict[str, Any]):
+    """
+    Dumps the configuration used for this run into the instance directory.
+    """
+    os.makedirs(RUNS_DIR, exist_ok=True)
+    instance_dir = os.path.join(RUNS_DIR, instance_id)
+    os.makedirs(instance_dir, exist_ok=True)
+
+    config_path = os.path.join(instance_dir, "config.json")
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(config_data, f, indent=2)
+
+
 def save_metrics(instance_id: str, metrics: Dict[str, Any]):
     """
     Logs high-level metrics to SQLite.

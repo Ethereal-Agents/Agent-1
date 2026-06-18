@@ -14,6 +14,7 @@ def mock_config():
         patch("agent.loop.get_test_failure_prompt", return_value="TESTS FAILED"),
         patch("agent.loop.COMPACTION_THRESHOLD", 15),
         patch("agent.loop.append_trajectory_step"),
+        patch("agent.loop.dump_run_config"),
     ):
         yield
 
