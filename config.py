@@ -55,4 +55,3 @@ def get_test_failure_prompt(test_results: str) -> str:
     with open(TEST_FAILURE_PROMPT_PATH, "r", encoding="utf-8") as f:
         template = f.read()
     return template.replace("{test_results}", test_results)
-
