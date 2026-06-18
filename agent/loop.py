@@ -12,10 +12,12 @@ from config import (
     DEFAULT_MODEL,
     MAX_STEPS,
     MAX_SUBMISSIONS,
+    _config,
     get_compaction_prompt,
     get_system_prompt,
+    get_test_failure_prompt,
 )
-from memory.trajectory import save_trajectory
+from memory.trajectory import append_trajectory_step, dump_run_config, save_metrics
 from tools.registry import execute_tool, get_openai_tools
 
 
@@ -33,8 +35,10 @@ class Agent:
         self.compaction_model = compaction_model
         self.instance_id = instance_id
         self.system_prompt = get_system_prompt()
+
         self.compaction_prompt = get_compaction_prompt()
         self.history: List[Dict[str, Any]] = []
+        self.full_history: List[Dict[str, Any]] = []
 
         self.step_count = 0
         self.submit_count = 0
@@ -42,12 +46,25 @@ class Agent:
         self.cumulative_cost = 0.0
         self.start_time = 0.0
 
+        # Dump configuration for experiment tracking
+        run_config = _config.copy()
+        run_config["runtime_overrides"] = {
+            "model": self.model,
+            "compaction_model": self.compaction_model,
+        }
+        dump_run_config(self.instance_id, run_config)
+
+    def _append_history(self, message: Dict[str, Any]):
+        self.history.append(message)
+        self.full_history.append(message)
+        append_trajectory_step(self.instance_id, message)
+
     def run(self, issue_description: str) -> List[Dict[str, Any]]:
         print(f"Starting recall-agent on model: {self.model}")
         self.start_time = time.time()
 
         # Initialize conversation history with Checkpoints 1 and 2 for Prompt Caching
-        self.history = [
+        initial_history = [
             {
                 "role": "system",
                 "content": [
@@ -69,6 +86,11 @@ class Agent:
                 ],
             },
         ]
+
+        self.history = []
+        self.full_history = []
+        for step in initial_history:
+            self._append_history(step)
 
         while self.step_count < MAX_STEPS:
             print(f"\n--- Step {self.step_count + 1} ---")
@@ -96,7 +118,7 @@ class Agent:
             print("\n[HARD STOP] Max steps reached.")
 
         self._finalize_run()
-        return self.history
+        return self.full_history
 
     def _call_llm(self):
         import copy
@@ -132,7 +154,7 @@ class Agent:
         message = response.choices[0].message
 
         # Append assistant's response exactly as provided by the API
-        self.history.append(message.model_dump(exclude_none=True))
+        self._append_history(message.model_dump(exclude_none=True))
         return message
 
     def _process_tools(self, tool_calls) -> bool:
@@ -145,6 +167,7 @@ class Agent:
                 tool_args = {}
 
             print(f"[Tool Call]: {tool_name}({tool_args})")
+            should_continue = True
 
             # --- INTERCEPT submit_patch ---
             if tool_name == "submit_patch":
@@ -152,52 +175,24 @@ class Agent:
                 if self.submit_count >= MAX_SUBMISSIONS:
                     print(f"\n[HARD STOP] Submission cap ({MAX_SUBMISSIONS}) reached. Halting.")
                     observation = "[HARD STOP] Submission limit reached. Task failed."
-                    self.history.append(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "name": tool_name,
-                            "content": observation,
-                        }
-                    )
-                    return False  # Exit agent loop
-
-                print(f"Verifying patch (Attempt {self.submit_count}/{MAX_SUBMISSIONS})...")
-                # Trigger the actual test suite to verify
-                test_results = execute_tool("run_tests", {"targets": []})
-
-                if "<status>PASSED</status>" in test_results:
-                    print("\n[SUCCESS] Tests passed! Patch successful.")
-                    observation = "[SUCCESS] All tests passed! Please provide a final summary of what you fixed to the user, and do not call any more tools."
-                    self.history.append(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "name": tool_name,
-                            "content": observation,
-                        }
-                    )
-                    # We let the loop continue so the LLM can generate a final conversational summary.
+                    should_continue = False  # Exit agent loop after appending
                 else:
-                    print("\n[FAILURE] Tests failed. Feeding back to agent for reflection.")
-                    observation = (
-                        f"TESTS FAILED. Please reflect and try again. Logs:\n{test_results}"
-                    )
-                    self.history.append(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "name": tool_name,
-                            "content": observation,
-                        }
-                    )
+                    print(f"Verifying patch (Attempt {self.submit_count}/{MAX_SUBMISSIONS})...")
+                    # Trigger the actual test suite to verify
+                    test_results = execute_tool("run_tests", {"targets": []})
 
-                continue
+                    if "<status>PASSED</status>" in test_results:
+                        print("\n[SUCCESS] Tests passed! Patch successful.")
+                        observation = "[SUCCESS] All tests passed! Please provide a final summary of what you fixed to the user, and do not call any more tools."
+                    else:
+                        print("\n[FAILURE] Tests failed. Feeding back to agent for reflection.")
+                        observation = get_test_failure_prompt(test_results)
+            else:
+                # --- STANDARD TOOLS ---
+                observation = execute_tool(tool_name, tool_args)
 
-            # --- STANDARD TOOLS ---
-            observation = execute_tool(tool_name, tool_args)
-
-            self.history.append(
+            # Append the tool's result back to the LLM exactly once
+            self._append_history(
                 {
                     "role": "tool",
                     "tool_call_id": tool_call.id,
@@ -205,6 +200,9 @@ class Agent:
                     "content": observation,
                 }
             )
+
+            if not should_continue:
+                return False
 
         return True
 
@@ -258,6 +256,14 @@ class Agent:
             }
             self.history = head + [middle_summary] + tail
 
+            # Log the compaction event to the full trajectory for the viewer
+            compaction_event = {
+                "role": "system",
+                "content": f"[MEMORY COMPACTION TRIGGERED]\nSummarized {len(middle)} messages.\n\nSummary result:\n{summary_text}",
+            }
+            self.full_history.append(compaction_event)
+            append_trajectory_step(self.instance_id, compaction_event)
+
     def _track_metrics(self, response):
         """Extract and accumulate token counts and costs from a litellm response."""
         if hasattr(response, "usage") and response.usage:
@@ -282,7 +288,7 @@ class Agent:
             "duration_seconds": duration,
         }
 
-        save_trajectory(self.instance_id, self.history, metrics)
+        save_metrics(self.instance_id, metrics)
 
 
 def run_agent(
