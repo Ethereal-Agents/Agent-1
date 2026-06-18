@@ -38,7 +38,7 @@ def main():
     parser.add_argument(
         "--docker-image",
         type=str,
-        default="python:3.11-slim",
+        default="python:3.11",
         help="The docker image to use if --env docker is selected.",
     )
     parser.add_argument(
@@ -46,6 +46,12 @@ def main():
         type=str,
         default=None,
         help="A pre-existing docker container ID to attach to if --env docker is selected.",
+    )
+    parser.add_argument(
+        "--docker-setup",
+        type=str,
+        default=None,
+        help="A setup command to run inside the newly created docker container (e.g., 'pip install pytest').",
     )
 
     args = parser.parse_args()
@@ -71,6 +77,7 @@ def main():
         env = DockerEnvironment(
             image=args.docker_image,
             container_id=args.docker_container,
+            setup_command=args.docker_setup,
             mount_dir=target_dir,
         )
     else:
