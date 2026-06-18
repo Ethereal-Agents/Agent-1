@@ -6,7 +6,7 @@ from tools.environment import ExecutionEnvironment
 from tools.file_ops import EditTool, ReadFileTool
 from tools.run_tests import RunTestsTool
 from tools.search import CodeSearchTool
-from tools.submit_patch import SubmitPatchTool
+from tools.finish import FinishTool
 
 # Instantiate all tools
 TOOLS: List[BaseTool] = [
@@ -15,7 +15,7 @@ TOOLS: List[BaseTool] = [
     BashTool(),
     CodeSearchTool(),
     RunTestsTool(),
-    SubmitPatchTool(),
+    FinishTool(),
 ]
 
 # Map tool name to tool instance for fast execution

@@ -1,23 +1,23 @@
 import os
 
-from tools.submit import SubmitTool
+from tools.finish import FinishTool
 
 
-def test_submit_tool():
-    tool = SubmitTool()
-    result = tool.run(summary="Finished everything perfectly.")
+def test_finish_tool():
+    tool = FinishTool()
+    result = tool.run(summary="Fixed the bug by correcting the return value.")
 
     assert "[AGENT_FINISHED]" in result
-    assert "Finished everything perfectly." in result
+    assert "Fixed the bug by correcting the return value." in result
 
     assert os.path.exists("fix.patch")
     os.remove("fix.patch")
 
 
-def test_submit_tool_no_git(tmp_path, monkeypatch):
+def test_finish_tool_no_git(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    tool = SubmitTool()
+    tool = FinishTool()
     result = tool.run(summary="test")
     assert "ERROR: Failed to generate patch" in result
-    assert "ATTEMPTED: submit()" in result
+    assert "ATTEMPTED: finish()" in result
     assert "HINT: Ensure you are inside a git repository." in result

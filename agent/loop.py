@@ -11,11 +11,9 @@ from config import (
     COMPACTION_THRESHOLD,
     DEFAULT_MODEL,
     MAX_STEPS,
-    MAX_SUBMISSIONS,
     _config,
     get_compaction_prompt,
     get_system_prompt,
-    get_test_failure_prompt,
 )
 from memory.trajectory import append_trajectory_step, dump_run_config, save_metrics
 from tools.registry import execute_tool, get_env_system_prompt, get_openai_tools
@@ -31,6 +29,9 @@ class Agent:
         if not instance_id:
             instance_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
 
+        # litellm.log_raw_request_response = True
+        # litellm.set_verbose = True
+
         self.model = model
         self.compaction_model = compaction_model
         self.instance_id = instance_id
@@ -45,10 +46,12 @@ class Agent:
         self.full_history: List[Dict[str, Any]] = []
 
         self.step_count = 0
-        self.submit_count = 0
         self.cumulative_tokens = 0
         self.cumulative_cost = 0.0
         self.start_time = 0.0
+        self.has_run_tests = False
+        self.finish_nudged = False
+        self.baseline_failures: set = set()
 
         # Dump configuration for experiment tracking
         run_config = _config.copy()
@@ -67,6 +70,19 @@ class Agent:
         print(f"Starting recall-agent on model: {self.model}")
         self.start_time = time.time()
 
+        # Capture pre-existing test failures before the agent starts
+        self.baseline_failures = self._capture_test_baseline()
+
+        # Build baseline context for the agent
+        baseline_msg = ""
+        if self.baseline_failures:
+            failure_list = "\n".join(f"  - {f}" for f in sorted(self.baseline_failures))
+            baseline_msg = (
+                f"\n\n**Pre-existing test failures (NOT your responsibility):**\n"
+                f"{failure_list}\n"
+                f"These tests were already failing before you started. Ignore them."
+            )
+
         # Initialize conversation history with Checkpoints 1 and 2 for Prompt Caching
         initial_history = [
             {
@@ -84,7 +100,7 @@ class Agent:
                 "content": [
                     {
                         "type": "text",
-                        "text": f"Please fix the following issue:\n\n{issue_description}",
+                        "text": f"Please fix the following issue:\n\n{issue_description}{baseline_msg}",
                         "cache_control": {"type": "ephemeral"},
                     }
                 ],
@@ -103,9 +119,16 @@ class Agent:
             if not message:
                 break
 
+            # Extract reasoning/content robustly
+            reasoning = getattr(message, "content", None)
+            if not reasoning and getattr(message, "reasoning_content", None):
+                reasoning = message.reasoning_content
+            elif not reasoning and getattr(message, "provider_specific_fields", None) and isinstance(message.provider_specific_fields, dict):
+                reasoning = message.provider_specific_fields.get("reasoning")
+            
             # Print reasoning if available
-            if message.content:
-                print(f"\n[Reasoning]: {message.content.strip()}")
+            if reasoning:
+                print(f"\n[Reasoning]: {reasoning.strip()}")
 
             if not hasattr(message, "tool_calls") or not message.tool_calls:
                 print("\n[Agent finished. No tools called.]")
@@ -149,6 +172,8 @@ class Agent:
                 messages=messages,
                 tools=get_openai_tools(),
             )
+            print("Raw LLM API Response:")
+            print(response)
         except Exception as e:
             print(f"API Error: {e}")
             return None
@@ -157,8 +182,20 @@ class Agent:
 
         message = response.choices[0].message
 
+        dumped = message.model_dump(exclude_none=True)
+        
+        # Ensure reasoning is preserved in the history's content field
+        reasoning = getattr(message, "content", None)
+        if not reasoning and getattr(message, "reasoning_content", None):
+            reasoning = message.reasoning_content
+        elif not reasoning and getattr(message, "provider_specific_fields", None) and isinstance(message.provider_specific_fields, dict):
+            reasoning = message.provider_specific_fields.get("reasoning")
+            
+        if reasoning and "content" not in dumped:
+            dumped["content"] = reasoning
+
         # Append assistant's response exactly as provided by the API
-        self._append_history(message.model_dump(exclude_none=True))
+        self._append_history(dumped)
         return message
 
     def _process_tools(self, tool_calls) -> bool:
@@ -171,31 +208,37 @@ class Agent:
                 tool_args = {}
 
             print(f"[Tool Call]: {tool_name}({tool_args})")
-            should_continue = True
 
-            # --- INTERCEPT submit_patch ---
-            if tool_name == "submit_patch":
-                self.submit_count += 1
-                if self.submit_count >= MAX_SUBMISSIONS:
-                    print(f"\n[HARD STOP] Submission cap ({MAX_SUBMISSIONS}) reached. Halting.")
-                    observation = "[HARD STOP] Submission limit reached. Task failed."
-                    should_continue = False  # Exit agent loop after appending
+            if tool_name == "finish":
+                # Soft guardrail: nudge once if agent never ran tests
+                if not self.has_run_tests and not self.finish_nudged:
+                    self.finish_nudged = True
+                    observation = (
+                        "[NOTE] You are finishing without having run any tests this session. "
+                        "If you are confident your changes are correct, call finish again. "
+                        "Otherwise, consider running the relevant tests first."
+                    )
+                    print("[Soft Nudge] Agent finishing without test verification.")
                 else:
-                    print(f"Verifying patch (Attempt {self.submit_count}/{MAX_SUBMISSIONS})...")
-                    # Trigger the actual test suite to verify
-                    test_results = execute_tool("run_tests", {"targets": []})
-
-                    if "<status>PASSED</status>" in test_results:
-                        print("\n[SUCCESS] Tests passed! Patch successful.")
-                        observation = "[SUCCESS] All tests passed! Please provide a final summary of what you fixed to the user, and do not call any more tools."
-                    else:
-                        print("\n[FAILURE] Tests failed. Feeding back to agent for reflection.")
-                        observation = get_test_failure_prompt(test_results)
+                    # Accept the finish
+                    observation = execute_tool("finish", tool_args)
+                    self._append_history(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "name": tool_name,
+                            "content": observation,
+                        }
+                    )
+                    print(f"\n[FINISHED] {tool_args.get('summary', 'Agent finished.')}")
+                    return False
             else:
-                # --- STANDARD TOOLS ---
+                # Standard tool execution
                 observation = execute_tool(tool_name, tool_args)
+                # Track if agent has voluntarily run tests
+                if tool_name == "run_tests":
+                    self.has_run_tests = True
 
-            # Append the tool's result back to the LLM exactly once
             self._append_history(
                 {
                     "role": "tool",
@@ -205,10 +248,24 @@ class Agent:
                 }
             )
 
-            if not should_continue:
-                return False
-
         return True
+
+    def _capture_test_baseline(self) -> set:
+        """Run tests once before the agent starts to identify pre-existing failures."""
+        import re
+
+        print("[Baseline] Capturing pre-existing test failures...")
+        try:
+            result = execute_tool("run_tests", {"targets": []})
+            failures = set(re.findall(r'<test name="([^"]+)">', result))
+            if failures:
+                print(f"[Baseline] {len(failures)} pre-existing test failure(s) detected.")
+            else:
+                print("[Baseline] All tests passing. Clean slate.")
+            return failures
+        except Exception as e:
+            print(f"[Baseline] Failed to capture baseline: {e}")
+            return set()
 
     def _compact_memory(self):
         # --- "Sawtooth" Memory Compaction ---

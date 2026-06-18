@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 
 from agent.loop import Agent, run_agent
-from config import COMPACTION_THRESHOLD, MAX_SUBMISSIONS
+from config import COMPACTION_THRESHOLD
 
 
 @pytest.fixture
@@ -11,10 +11,10 @@ def mock_config():
     with (
         patch("agent.loop.get_system_prompt", return_value="sys prompt"),
         patch("agent.loop.get_compaction_prompt", return_value="compaction prompt"),
-        patch("agent.loop.get_test_failure_prompt", return_value="TESTS FAILED"),
         patch("agent.loop.COMPACTION_THRESHOLD", 15),
         patch("agent.loop.append_trajectory_step"),
         patch("agent.loop.dump_run_config"),
+        patch.object(Agent, "_capture_test_baseline", return_value=set()),
     ):
         yield
 
@@ -66,7 +66,9 @@ class TestAgentInit:
         assert agent.system_prompt.startswith("sys prompt")
         assert agent.compaction_prompt == "compaction prompt"
         assert agent.step_count == 0
-        assert agent.submit_count == 0
+        assert agent.has_run_tests is False
+        assert agent.finish_nudged is False
+        assert agent.baseline_failures == set()
         assert agent.cumulative_tokens == 0
         assert agent.cumulative_cost == 0.0
 
@@ -192,42 +194,57 @@ class TestAgentTools:
         assert res is True
         assert len(agent.history) == 1
 
-    def test_process_tools_submit_patch_success(self, mock_config):
+    def test_process_tools_finish_after_tests(self, mock_config):
+        """Agent that ran tests can finish immediately."""
         agent = Agent()
-        tc = MockToolCall("call_1", "submit_patch", '{"reasoning": "done"}')
+        agent.has_run_tests = True
+        tc = MockToolCall("call_1", "finish", '{"summary": "Fixed the bug"}')
 
-        with patch("agent.loop.execute_tool", return_value="<status>PASSED</status>") as mock_exec:
-            res = agent._process_tools([tc])
-            mock_exec.assert_called_with("run_tests", {"targets": []})
-
-        assert res is True
-        assert agent.submit_count == 1
-        assert len(agent.history) == 1
-        assert "[SUCCESS]" in agent.history[0]["content"]
-
-    def test_process_tools_submit_patch_failure(self, mock_config):
-        agent = Agent()
-        tc = MockToolCall("call_1", "submit_patch", '{"reasoning": "done"}')
-
-        with patch("agent.loop.execute_tool", return_value="<status>FAILED</status>"):
+        with patch("agent.loop.execute_tool", return_value="[AGENT_FINISHED] Task completed."):
             res = agent._process_tools([tc])
 
-        assert res is True
-        assert agent.submit_count == 1
+        assert res is False
         assert len(agent.history) == 1
-        assert "TESTS FAILED" in agent.history[0]["content"]
+        assert "[AGENT_FINISHED]" in agent.history[0]["content"]
 
-    def test_process_tools_submit_patch_max_submissions(self, mock_config):
+    def test_process_tools_finish_soft_nudge(self, mock_config):
+        """Agent that never ran tests gets a soft nudge on first finish attempt."""
         agent = Agent()
-        agent.submit_count = MAX_SUBMISSIONS - 1
-        tc = MockToolCall("call_1", "submit_patch", '{"reasoning": "done"}')
+        assert agent.has_run_tests is False
+        tc = MockToolCall("call_1", "finish", '{"summary": "done"}')
 
         res = agent._process_tools([tc])
 
-        assert res is False
-        assert agent.submit_count == MAX_SUBMISSIONS
+        assert res is True  # Loop continues
+        assert agent.finish_nudged is True
         assert len(agent.history) == 1
-        assert "[HARD STOP]" in agent.history[0]["content"]
+        assert "[NOTE]" in agent.history[0]["content"]
+        assert "without having run any tests" in agent.history[0]["content"]
+
+    def test_process_tools_finish_after_nudge(self, mock_config):
+        """Agent that was nudged and calls finish again is accepted."""
+        agent = Agent()
+        agent.finish_nudged = True  # Already nudged
+        tc = MockToolCall("call_1", "finish", '{"summary": "confident"}')
+
+        with patch("agent.loop.execute_tool", return_value="[AGENT_FINISHED] Task completed."):
+            res = agent._process_tools([tc])
+
+        assert res is False
+        assert len(agent.history) == 1
+        assert "[AGENT_FINISHED]" in agent.history[0]["content"]
+
+    def test_process_tools_tracks_run_tests(self, mock_config):
+        """Running run_tests sets has_run_tests flag."""
+        agent = Agent()
+        assert agent.has_run_tests is False
+        tc = MockToolCall("call_1", "run_tests", '{"targets": ["tests/"]}')
+
+        with patch("agent.loop.execute_tool", return_value="<status>PASSED</status>"):
+            res = agent._process_tools([tc])
+
+        assert res is True
+        assert agent.has_run_tests is True
 
 
 class TestAgentMemory:
@@ -358,7 +375,7 @@ class TestAgentRun:
     def test_run_loop_should_not_continue(self, mock_config):
         agent = Agent()
         msg_with_tool = MockMessage(
-            "reasoning", tool_calls=[MockToolCall("1", "submit_patch", "{}")]
+            "reasoning", tool_calls=[MockToolCall("1", "finish", '{"summary": "done"}')]
         )
 
         with (
