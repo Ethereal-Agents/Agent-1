@@ -90,6 +90,15 @@ def parse_results(run_id: str, output_dir: str) -> GradeReport:
                 fpath = os.path.join(search_dir, fname)
                 with open(fpath) as f:
                     report_data = json.load(f)
+                
+                # If swebench dumped it in the root folder, move it to output_dir to keep workspace clean
+                if search_dir == ".":
+                    import shutil
+                    try:
+                        target_path = os.path.join(output_dir, fname)
+                        shutil.move(fpath, target_path)
+                    except Exception:
+                        pass  # safe fallback if move fails
                 break
         if report_data:
             break
