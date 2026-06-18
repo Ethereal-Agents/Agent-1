@@ -1,6 +1,11 @@
+import subprocess
+import uuid
+import xml.etree.ElementTree as ET
+
 from pydantic import BaseModel, Field
 
 from tools.base import BaseTool
+from tools.utils import format_error, truncate_output
 
 
 class RunTestsArgs(BaseModel):
@@ -11,52 +16,48 @@ class RunTestsArgs(BaseModel):
 
 class RunTestsTool(BaseTool):
     name = "run_tests"
-    description = "Runs the test suite and returns structured execution results."
+    description = "Runs the test suite using pytest and returns structured execution results. Note: This tool specifically expects and runs pytest."
     args_schema = RunTestsArgs
 
     def run(self, targets: list[str], **kwargs) -> str:
-        import os
-        import subprocess
-        import uuid
-        import xml.etree.ElementTree as ET
-
-        from tools.utils import format_error, truncate_output
-
-        report_file = f".test_report.{uuid.uuid4().hex}.xml"
-
-        import sys
+        report_file = f"/tmp/.test_report.{uuid.uuid4().hex}.xml"
 
         try:
             # We don't strictly care about the return code here (pytest returns 1 on failure),
             # because we will parse the XML it spits out.
-            subprocess.run(
-                [sys.executable, "-m", "pytest"] + targets + [f"--junitxml={report_file}"],
-                capture_output=True,
-                text=True,
-            )
-        except FileNotFoundError:
+            cmd_str = f"python -m pytest {' '.join(targets)} --junitxml={report_file}"
+            result = self.env.run_bash(cmd_str, timeout=300)
+        except subprocess.TimeoutExpired:
             return format_error(
-                reason="pytest is not installed or not in PATH.",
-                attempted="subprocess.run(['pytest', ...])",
-                hint="Ensure you are running in the correct virtual environment where pytest is installed.",
+                reason="Pytest execution timed out after 300 seconds.",
+                attempted=cmd_str,
+                hint="One of the tests might contain an infinite loop or require user input.",
             )
         except Exception as e:
             return format_error(
                 reason=f"Failed to execute pytest: {str(e)}",
                 attempted=f"run_tests(targets={targets})",
-                hint="Check if the target path exists.",
             )
 
-        if not os.path.exists(report_file):
+        if result.returncode == 127:
             return format_error(
-                reason="Pytest did not generate the XML report.",
-                attempted=f"run_tests(targets={targets})",
-                hint="Check if the target contains valid tests. It may have failed to collect tests entirely.",
+                reason="pytest or python is not installed or not in PATH.",
+                attempted=cmd_str,
+                hint="Ensure you are running in an environment where pytest is installed.",
             )
 
         try:
-            tree = ET.parse(report_file)
-            root = tree.getroot()
+            xml_content = self.env.read_file(report_file)
+        except FileNotFoundError:
+            return f"[TEST EXECUTION FAILED]\nPytest did not generate the XML report. The testing framework likely crashed.\n\n<stdout>\n{truncate_output(result.stdout)}\n</stdout>\n<stderr>\n{truncate_output(result.stderr)}\n</stderr>"
+        except Exception as e:
+            return format_error(
+                reason=f"Failed to read the generated pytest XML report: {str(e)}",
+                attempted=f"read_file('{report_file}')",
+            )
+
+        try:
+            root = ET.fromstring(xml_content)
 
             # JUnit XML structure depends on whether it's a single <testsuite> or multiple nested.
             # Usually pytest puts everything under a top-level <testsuites> or <testsuite>.
@@ -113,7 +114,9 @@ class RunTestsTool(BaseTool):
                 hint="The test suite output may be malformed.",
             )
         finally:
-            if os.path.exists(report_file):
-                os.remove(report_file)
+            try:
+                self.env.run_bash(f"rm -f {report_file}", timeout=10)
+            except Exception:
+                pass
 
         return truncate_output(final_output)

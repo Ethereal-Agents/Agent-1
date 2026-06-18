@@ -1,6 +1,9 @@
+import subprocess
+
 from pydantic import BaseModel, Field
 
 from tools.base import BaseTool
+from tools.utils import format_error, truncate_output
 
 
 class BashArgs(BaseModel):
@@ -17,18 +20,8 @@ class BashTool(BaseTool):
     args_schema = BashArgs
 
     def run(self, command: str, timeout: int = 120, **kwargs) -> str:
-        import subprocess
-
-        from tools.utils import format_error, truncate_output
-
         try:
-            result = subprocess.run(
-                command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=timeout,  # Prevent infinite loops / interactive hangs
-            )
+            result = self.env.run_bash(command, timeout)
         except subprocess.TimeoutExpired:
             return format_error(
                 reason=f"Command timed out after {timeout} seconds.",
@@ -39,7 +32,6 @@ class BashTool(BaseTool):
             return format_error(
                 reason=f"Failed to execute command: {str(e)}",
                 attempted=f"bash(command='{command[:50]}...')",
-                hint="Ensure your bash syntax is valid.",
             )
 
         # Build the structured XML response

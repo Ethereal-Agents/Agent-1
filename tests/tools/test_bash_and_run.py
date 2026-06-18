@@ -63,4 +63,35 @@ def test_run_tests_missing_target():
 def test_run_tests_invalid_flag():
     tool = RunTestsTool()
     result = tool.run(targets=["--this-flag-is-invalid-and-will-break-pytest"])
-    assert "ERROR: Pytest did not generate the XML report." in result
+    assert "[TEST EXECUTION FAILED]" in result
+    assert "error: unrecognized arguments:" in result
+
+
+def test_run_tests_timeout():
+    import subprocess
+    from unittest.mock import MagicMock
+
+    tool = RunTestsTool()
+    tool.env.run_bash = MagicMock(side_effect=subprocess.TimeoutExpired("pytest", 300))
+    result = tool.run(targets=[])
+    assert "Pytest execution timed out after 300 seconds." in result
+
+
+def test_run_tests_127():
+    import subprocess
+    from unittest.mock import MagicMock
+
+    tool = RunTestsTool()
+    mock_result = subprocess.CompletedProcess(args="pytest", returncode=127, stdout="", stderr="")
+    tool.env.run_bash = MagicMock(return_value=mock_result)
+    result = tool.run(targets=[])
+    assert "pytest or python is not installed or not in PATH." in result
+
+
+def test_run_tests_xml_parse_error(temp_test_file):
+    from unittest.mock import MagicMock
+
+    tool = RunTestsTool()
+    tool.env.read_file = MagicMock(return_value="<invalid><xml")
+    result = tool.run(targets=[temp_test_file])
+    assert "Failed to parse pytest XML" in result

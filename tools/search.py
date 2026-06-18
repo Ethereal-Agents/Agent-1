@@ -1,6 +1,10 @@
+import shlex
+import subprocess
+
 from pydantic import BaseModel, Field
 
 from tools.base import BaseTool
+from tools.utils import format_error, truncate_output
 
 
 class CodeSearchArgs(BaseModel):
@@ -16,41 +20,30 @@ class CodeSearchTool(BaseTool):
     args_schema = CodeSearchArgs
 
     def run(self, query: str, directory: str = ".", **kwargs) -> str:
-        import os
-        import subprocess
-
-        from tools.utils import format_error, truncate_output
-
-        if not os.path.isdir(directory):
-            return format_error(
-                reason=f"Directory '{directory}' not found.",
-                attempted=f"code_search(directory='{directory}')",
-                hint="Use the bash tool with 'ls' to check the directory structure.",
-            )
-
-        import shutil
-
-        rg_path = shutil.which("rg") or "rg"
-
         try:
-            # -n forces line numbers, -H forces filename, --no-heading removes blank lines between files
-            # '--' stops flag parsing so queries starting with hyphens are safe
-            result = subprocess.run(
-                [rg_path, "-n", "-H", "--no-heading", "--", query, directory],
-                capture_output=True,
-                text=True,
-            )
-        except FileNotFoundError:
+            # We must escape the arguments since self.env.run_bash uses shell=True
+            query_esc = shlex.quote(query)
+            dir_esc = shlex.quote(directory)
+            cmd_str = f"rg -n -H --no-heading -- {query_esc} {dir_esc}"
+
+            result = self.env.run_bash(cmd_str, timeout=120)
+        except subprocess.TimeoutExpired:
             return format_error(
-                reason="The 'rg' (ripgrep) command is not found in the system PATH.",
-                attempted="subprocess.run(['rg', ...])",
-                hint="You must install ripgrep using the appropriate package manager for your OS and ensure it is in your PATH.",
+                reason="Ripgrep search timed out after 120 seconds.",
+                attempted=cmd_str,
+                hint="The directory might be too large. Try narrowing your search directory.",
             )
         except Exception as e:
             return format_error(
                 reason=f"Failed to execute ripgrep: {str(e)}",
                 attempted=f"code_search(query='{query}')",
-                hint="Check if the query is a valid regex.",
+            )
+
+        if result.returncode == 127:
+            return format_error(
+                reason="The 'rg' (ripgrep) command is not found in the environment.",
+                attempted=cmd_str,
+                hint="You must install ripgrep in the target environment.",
             )
 
         if result.returncode == 1 and not result.stdout:
@@ -60,7 +53,6 @@ class CodeSearchTool(BaseTool):
             return format_error(
                 reason=f"Ripgrep failed with exit code {result.returncode}: {result.stderr}",
                 attempted=f"code_search(query='{query}')",
-                hint="Ensure your regex query is validly escaped.",
             )
 
         # Parse the output into XML blocks

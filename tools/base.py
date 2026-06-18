@@ -2,6 +2,8 @@ from typing import Any, Dict, Type
 
 from pydantic import BaseModel
 
+from tools.environment import ExecutionEnvironment, LocalEnvironment
+
 
 class BaseTool:
     """Abstract base class for all agent tools."""
@@ -9,6 +11,9 @@ class BaseTool:
     name: str
     description: str
     args_schema: Type[BaseModel]
+
+    def __init__(self, env: ExecutionEnvironment = None):
+        self.env = env or LocalEnvironment()
 
     def run(self, **kwargs) -> str:
         """Executes the tool logic and returns an observation string."""

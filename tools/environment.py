@@ -1,0 +1,169 @@
+import os
+import subprocess
+import tempfile
+from abc import ABC, abstractmethod
+
+try:
+    import docker
+except ImportError:
+    docker = None
+
+
+class ExecutionEnvironment(ABC):
+    @abstractmethod
+    def run_bash(self, cmd: str, timeout: int) -> subprocess.CompletedProcess:
+        pass
+
+    @abstractmethod
+    def read_file(self, path: str) -> str:
+        pass
+
+    @abstractmethod
+    def write_file(self, path: str, content: str) -> None:
+        pass
+
+    @abstractmethod
+    def get_system_prompt_addition(self) -> str:
+        """Returns environment-specific text to be appended to the LLM's system prompt."""
+        pass
+
+
+class LocalEnvironment(ExecutionEnvironment):
+    def run_bash(self, cmd: str, timeout: int) -> subprocess.CompletedProcess:
+        return subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+
+    def read_file(self, path: str) -> str:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+
+    def write_file(self, path: str, content: str) -> None:
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+    def get_system_prompt_addition(self) -> str:
+        return (
+            "ENVIRONMENT CONTEXT:\n"
+            "You are executing commands natively on a Local Mac host. Expect standard macOS OS/Bash errors. "
+            "Be extremely careful not to modify or delete critical system files outside of the workspace."
+        )
+
+
+class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
+    def __init__(
+        self,
+        image: str = None,
+        container_id: str = None,
+        setup_command: str = None,
+        mount_dir: str = None,
+    ):
+        if docker is None:
+            raise ImportError("The 'docker' python package is required. Run 'uv add docker'.")
+
+        try:
+            subprocess.run(["docker", "info"], check=True, capture_output=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            raise EnvironmentError(
+                "Docker Engine is required for the sandboxed environment but is not running. "
+                "Please start Docker or configure the agent to use LocalEnvironment."
+            )
+
+        self.client = docker.from_env()
+        self._owns_container = False
+
+        if container_id:
+            self.container = self.client.containers.get(container_id)
+        elif image:
+            import os
+
+            self._owns_container = True
+            mount_path = mount_dir or os.getcwd()
+            # Spin up a generic sandbox container and mount the codebase
+            self.container = self.client.containers.run(
+                image,
+                command="sleep infinity",
+                detach=True,
+                remove=True,
+                volumes={mount_path: {"bind": "/workspace", "mode": "rw"}},
+                working_dir="/workspace",
+            )
+        else:
+            raise ValueError("Must provide either image or container_id")
+
+        if setup_command:
+            result = self.run_bash(setup_command, timeout=600)
+            if result.returncode != 0:
+                raise RuntimeError(f"Failed to run setup_command: {result.stderr}")
+
+    def cleanup(self):
+        """Stops and removes the container if this environment spun it up."""
+        if self._owns_container and getattr(self, "container", None):
+            self.container.stop()
+
+    def run_bash(self, cmd: str, timeout: int) -> subprocess.CompletedProcess:
+        # We enforce timeout on the host using a subprocess calling the docker cli
+        # This is more reliable for timeout enforcement than the docker python SDK exec_run
+        docker_cmd = ["docker", "exec", self.container.id, "/bin/bash", "-c", cmd]
+        return subprocess.run(docker_cmd, capture_output=True, text=True, timeout=timeout)
+
+    def read_file(self, path: str) -> str:
+        # docker cp resolves relative paths from / instead of the container's working_dir
+        if not path.startswith("/"):
+            path = f"/workspace/{path}"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            local_file_path = os.path.join(tmpdir, os.path.basename(path))
+            # This uses the docker CLI for simplicity, as the python SDK get_archive is slightly more complex
+            # docker cp container:path dest
+            try:
+                result = subprocess.run(
+                    ["docker", "cp", f"{self.container.id}:{path}", local_file_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+            except subprocess.TimeoutExpired:
+                raise TimeoutError(
+                    f"docker cp timed out after 10 seconds reading '{path}'. The file may be exceptionally large."
+                )
+            if result.returncode != 0:
+                if "No such container:path" in result.stderr or "Could not find" in result.stderr:
+                    raise FileNotFoundError(f"[Errno 2] No such file or directory: '{path}'")
+                raise RuntimeError(f"docker cp failed: {result.stderr}")
+            with open(local_file_path, "r", encoding="utf-8") as f:
+                return f.read()
+
+    def write_file(self, path: str, content: str) -> None:
+        # docker cp resolves relative paths from / instead of the container's working_dir
+        if not path.startswith("/"):
+            path = f"/workspace/{path}"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            local_file_path = os.path.join(tmpdir, os.path.basename(path))
+            with open(local_file_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            # Make sure target dir exists in container
+            target_dir = os.path.dirname(path)
+            self.run_bash(f"mkdir -p {target_dir}", timeout=10)
+
+            try:
+                result = subprocess.run(
+                    ["docker", "cp", local_file_path, f"{self.container.id}:{path}"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+            except subprocess.TimeoutExpired:
+                raise TimeoutError(f"docker cp timed out after 10 seconds writing '{path}'.")
+            if result.returncode != 0:
+                raise RuntimeError(f"docker cp failed: {result.stderr}")
+
+    def get_system_prompt_addition(self) -> str:
+        return (
+            "ENVIRONMENT CONTEXT:\n"
+            "You are executing inside a sandboxed Linux Docker container. Your workspace is mounted at `/workspace`. "
+            "File operations (read/write) are proxied via `docker cp`. If you encounter Docker-related errors "
+            "(e.g., 'docker cp failed: Error response from daemon...'), they refer to the container's isolated file system. "
+            "Standard Linux behavior applies within."
+        )

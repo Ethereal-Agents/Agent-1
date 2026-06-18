@@ -33,10 +33,32 @@ def test_code_search_invalid_dir():
     tool = CodeSearchTool()
     result = tool.run(query="def", directory="does_not_exist_xyz123")
 
-    assert "ERROR: Directory 'does_not_exist_xyz123' not found." in result
+    assert "Ripgrep failed with exit code 2" in result
+    assert "No such file or directory" in result
 
 
 def test_code_search_invalid_regex(temp_repo):
     tool = CodeSearchTool()
     result = tool.run(query="[", directory=temp_repo)
     assert "Ripgrep failed with exit code 2" in result
+
+
+def test_code_search_timeout():
+    import subprocess
+    from unittest.mock import MagicMock
+
+    tool = CodeSearchTool()
+    tool.env.run_bash = MagicMock(side_effect=subprocess.TimeoutExpired("rg", 120))
+    result = tool.run(query="test", directory=".")
+    assert "Ripgrep search timed out after 120 seconds." in result
+
+
+def test_code_search_127():
+    import subprocess
+    from unittest.mock import MagicMock
+
+    tool = CodeSearchTool()
+    mock_result = subprocess.CompletedProcess(args="rg", returncode=127, stdout="", stderr="")
+    tool.env.run_bash = MagicMock(return_value=mock_result)
+    result = tool.run(query="test", directory=".")
+    assert "The 'rg' (ripgrep) command is not found in the environment." in result

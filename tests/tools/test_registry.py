@@ -1,4 +1,5 @@
-from tools.registry import execute_tool, get_openai_tools
+from tools.environment import LocalEnvironment
+from tools.registry import TOOLS, execute_tool, get_openai_tools, initialize_tools
 from tools.utils import format_error, truncate_output
 
 
@@ -39,3 +40,26 @@ def test_format_error():
     assert "ERROR: Test reason" in err
     assert "ATTEMPTED: Test attempt" in err
     assert "HINT: Test hint" in err
+
+
+def test_initialize_tools():
+    env = LocalEnvironment()
+    initialize_tools(env)
+    for tool in TOOLS:
+        assert tool.env is env
+
+
+def test_execute_tool_invalid_args():
+    # command should be a string, passing an int should throw Pydantic ValidationError
+    # which is caught by the generic except Exception in execute_tool
+    result = execute_tool("bash", {"command": 123})
+    assert "ERROR: Failed to execute 'bash'" in result
+
+
+def test_get_env_system_prompt():
+    from tools.registry import get_env_system_prompt
+
+    env = LocalEnvironment()
+    initialize_tools(env)
+    prompt = get_env_system_prompt()
+    assert "ENVIRONMENT CONTEXT" in prompt

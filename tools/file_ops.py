@@ -1,4 +1,3 @@
-import os
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -21,21 +20,19 @@ class ReadFileTool(BaseTool):
     def run(
         self, path: str, start_line: Optional[int] = None, end_line: Optional[int] = None, **kwargs
     ) -> str:
-        if not os.path.isfile(path):
+        try:
+            content = self.env.read_file(path)
+            lines = content.splitlines(keepends=True) if content else []
+        except FileNotFoundError:
             return format_error(
                 reason=f"File '{path}' not found or is not a file.",
                 attempted=f"read_file(path='{path}')",
-                hint="Use the bash tool with 'ls' to check the directory contents and verify the file path.",
+                hint="File not found. Use the bash tool with 'ls' or 'find' to verify the exact path.",
             )
-
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
         except Exception as e:
             return format_error(
                 reason=f"Failed to read file: {str(e)}",
                 attempted=f"read_file(path='{path}')",
-                hint="Ensure you have permissions to read this file and that it is text-encoded.",
             )
 
         total_lines = len(lines)
@@ -97,21 +94,19 @@ class EditTool(BaseTool):
     def run(
         self, path: str, start_line: int, end_line: int, old_str: str, new_str: str, **kwargs
     ) -> str:
-        if not os.path.isfile(path):
+        try:
+            content = self.env.read_file(path)
+            lines = content.splitlines(keepends=True) if content else []
+        except FileNotFoundError:
             return format_error(
                 reason=f"File '{path}' not found.",
                 attempted=f"edit(path='{path}')",
-                hint="Use the read_file or code_search tool to find the correct file path.",
+                hint="File not found. Use the bash tool with 'ls' or 'find' to verify the exact path.",
             )
-
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
         except Exception as e:
             return format_error(
                 reason=f"Failed to read file: {str(e)}",
                 attempted=f"edit(path='{path}')",
-                hint="Ensure you have permissions.",
             )
 
         total_lines = len(lines)
@@ -144,13 +139,11 @@ class EditTool(BaseTool):
         lines[start_line - 1 : end_line] = new_lines
 
         try:
-            with open(path, "w", encoding="utf-8") as f:
-                f.writelines(lines)
+            self.env.write_file(path, "".join(lines))
         except Exception as e:
             return format_error(
                 reason=f"Failed to write changes: {str(e)}",
                 attempted=f"edit(path='{path}')",
-                hint="Check directory permissions.",
             )
 
         return f"[SUCCESS] Edited {path}.\nApplied diff:\n- {old_str.strip()[:100]}...\n+ {new_str.strip()[:100]}..."
