@@ -158,10 +158,16 @@ if file_path and os.path.exists(file_path):
             content_str = str(content) if content else ""
 
         if role == "system":
-            with st.chat_message("system", avatar="⚙️"):
-                st.markdown("**System Instructions**")
-                with st.expander("Show System Prompt"):
-                    st.markdown(content_str)
+            if "[MEMORY COMPACTION TRIGGERED]" in content_str:
+                with st.chat_message("system", avatar="🗜️"):
+                    st.warning("**Memory Compaction Triggered**")
+                    with st.expander("View Compacted Summary", expanded=False):
+                        st.markdown(content_str.replace("[MEMORY COMPACTION TRIGGERED]\n", ""))
+            else:
+                with st.chat_message("system", avatar="⚙️"):
+                    st.markdown("**System Instructions**")
+                    with st.expander("Show System Prompt"):
+                        st.markdown(content_str)
         elif role == "user":
             with st.chat_message("user", avatar="👤"):
                 st.markdown(content_str)
