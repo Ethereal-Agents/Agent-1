@@ -58,6 +58,13 @@ class Agent:
 
         self.compaction_prompt = get_compaction_prompt()
         self.history: List[Dict[str, Any]] = []
+
+        model_info = litellm.model_cost.get(self.model, {})
+        max_input = model_info.get("max_input_tokens") or model_info.get("max_tokens")
+        if max_input:
+            self.compaction_threshold = int(max_input * COMPACTION_TOKEN_FRACTION)
+        else:
+            self.compaction_threshold = COMPACTION_TOKEN_THRESHOLD
         self.full_history: List[Dict[str, Any]] = []
 
         self.step_count = 0
@@ -281,18 +288,10 @@ class Agent:
         except Exception:
             current_tokens = 0
 
-        model_info = litellm.model_cost.get(self.model, {})
-        max_input = model_info.get("max_input_tokens") or model_info.get("max_tokens")
-
-        if max_input:
-            threshold = int(max_input * COMPACTION_TOKEN_FRACTION)
-        else:
-            threshold = COMPACTION_TOKEN_THRESHOLD
-
-        if current_tokens > threshold:
+        if current_tokens > self.compaction_threshold:
             print(
                 f"\n[Memory Compaction] Triggering Sawtooth compaction... "
-                f"(Steps: {len(self.history)}, Tokens: {current_tokens}, Threshold: {threshold})"
+                f"(Steps: {len(self.history)}, Tokens: {current_tokens}, Threshold: {self.compaction_threshold})"
             )
             head = self.history[:2]  # Keep System Prompt and original User Task
 

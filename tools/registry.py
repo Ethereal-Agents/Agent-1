@@ -1,6 +1,14 @@
 import enum
 from typing import Any, Dict, List
 
+from tools.base import BaseTool
+from tools.bash import BashTool
+from tools.environment import ExecutionEnvironment
+from tools.file_ops import EditTool, ReadFileTool
+from tools.finish import FinishTool
+from tools.run_tests import RunTestsTool
+from tools.search import CodeSearchTool
+
 
 class ToolName(str, enum.Enum):
     READ_FILE = "read_file"
@@ -10,14 +18,6 @@ class ToolName(str, enum.Enum):
     RUN_TESTS = "run_tests"
     FINISH = "finish"
 
-
-from tools.base import BaseTool
-from tools.bash import BashTool
-from tools.environment import ExecutionEnvironment
-from tools.file_ops import EditTool, ReadFileTool
-from tools.finish import FinishTool
-from tools.run_tests import RunTestsTool
-from tools.search import CodeSearchTool
 
 # Instantiate all tools
 TOOLS: List[BaseTool] = [

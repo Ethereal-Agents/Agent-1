@@ -277,11 +277,11 @@ class TestAgentMemory:
         resp = MockResponse(msg, MockUsage())
 
         with (
-            patch("agent.loop.COMPACTION_TOKEN_THRESHOLD", 5),
             patch("agent.loop.litellm.token_counter", return_value=10),
             patch("agent.loop.litellm.completion", return_value=resp) as mock_completion,
             patch("agent.loop.litellm.completion_cost", return_value=0.02),
         ):
+            agent.compaction_threshold = 5
             agent._compact_memory()
 
         mock_completion.assert_called_once()
@@ -302,8 +302,8 @@ class TestAgentMemory:
             role = "assistant" if i % 2 == 0 else "tool"
             agent.history.append({"role": role, "content": "c"})
 
+        agent.compaction_threshold = 5
         with (
-            patch("agent.loop.COMPACTION_TOKEN_THRESHOLD", 5),
             patch("agent.loop.litellm.token_counter", return_value=10),
             patch("agent.loop.litellm.completion", side_effect=Exception("API failure")),
         ):
@@ -327,11 +327,11 @@ class TestAgentMemory:
         resp = MockResponse(msg, MockUsage())
 
         with (
-            patch("agent.loop.COMPACTION_TOKEN_THRESHOLD", 5),
             patch("agent.loop.litellm.token_counter", return_value=10),
             patch("agent.loop.litellm.completion", return_value=resp),
             patch("agent.loop.litellm.completion_cost", return_value=0.0),
         ):
+            agent.compaction_threshold = 5
             agent._compact_memory()
 
         assert "Summarized memory" in agent.history[2]["content"]
@@ -497,22 +497,18 @@ class TestAgentBaseline:
 
 class TestCompactionTokens:
     def test_compact_memory_token_threshold(self, mock_config):
-        agent = Agent()
-        agent.history = [{"role": "user", "content": "hello"}] * 10
-        with (
-            patch("agent.loop.COMPACTION_TOKEN_THRESHOLD", 5),
-            patch("agent.loop.litellm.token_counter", return_value=10),
-        ):
+        with patch("agent.loop.litellm.token_counter", return_value=10):
+            agent = Agent()
+            agent.compaction_threshold = 5
+            agent.history = [{"role": "user", "content": "hello"}] * 10
             agent._compact_memory()
             assert len(agent.history) == 8  # head(2) + tail(5) + summary(1) = 8
 
     def test_compact_memory_token_counter_exception(self, mock_config):
-        agent = Agent()
-        # Token counter crashes -> returns 0, so doesn't trigger token threshold
-        agent.history = [{"role": "user", "content": "hello"}] * 5
-        with (
-            patch("agent.loop.COMPACTION_TOKEN_THRESHOLD", 5),
-            patch("agent.loop.litellm.token_counter", side_effect=Exception("API down")),
-        ):
+        with patch("agent.loop.litellm.token_counter", side_effect=Exception("API down")):
+            agent = Agent()
+            agent.compaction_threshold = 5
+            # Token counter crashes -> returns 0, so doesn't trigger token threshold
+            agent.history = [{"role": "user", "content": "hello"}] * 5
             agent._compact_memory()
             assert len(agent.history) == 5
