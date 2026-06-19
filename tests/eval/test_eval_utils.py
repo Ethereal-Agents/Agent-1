@@ -1,6 +1,6 @@
-import pytest
-from eval.dataset import format_task_prompt, filter_by_instance_ids
+from eval.dataset import filter_by_instance_ids, format_task_prompt
 from eval.models import StatSummary
+
 
 def test_format_task_prompt():
     instance = {

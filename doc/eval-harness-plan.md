@@ -235,14 +235,14 @@ class Reporter:
         """
     
     def tag_failures(self, results: list[TaskResult], grades: GradeReport) -> list[dict]:
-        """Classify failures based on trajectory analysis:
-        - localization_error: edited wrong files/functions
-        - planning_error: wrong approach/strategy
-        - tool_error: tool execution failures
-        - hallucination: invented APIs/functions/files
-        - test_misread: misunderstood test output
+        """Classify failures based on heuristic analysis of TaskResult:
+        - resolved: SWE-bench verified fix
         - environment_failure: Docker/setup issues
         - timeout: exceeded step or time limit
+        - max_steps: ran out of step budget
+        - max_submissions: ran out of submission budget
+        - no_patch: exited cleanly but no code changes made
+        - tests_failed: patch submitted but tests failed
         """
 ```
 

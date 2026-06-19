@@ -43,9 +43,10 @@ import uuid
 from datetime import datetime
 
 
-def _load_eval_config(args) -> "EvalConfig":
+def _load_eval_config(args):
     """Build EvalConfig from the eval_config.yaml, then apply CLI overrides."""
     import yaml
+
     from eval.models import EvalConfig
 
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -153,7 +154,7 @@ def main():
     os.makedirs(run_output_dir, exist_ok=True)
 
     print(f"\n{'='*60}")
-    print(f"recall-agent eval harness")
+    print("recall-agent eval harness")
     print(f"Run ID:  {run_id}")
     print(f"Model:   {config.model}")
     print(f"Dataset: {config.dataset} ({config.split})")

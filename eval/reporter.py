@@ -8,7 +8,6 @@ from datetime import datetime
 
 from eval.models import EvalMetrics, GradeReport, StatSummary, TaskResult
 
-
 # ---------------------------------------------------------------------------
 # Heuristic failure taxonomy
 # No LLM calls — pure signal from agent state and trajectory metadata.

@@ -112,7 +112,7 @@ def run_single_task(instance: dict, config: EvalConfig, output_dir: str) -> Task
         os.environ["RECALL_RUNS_DIR"] = instance_run_dir
 
         agent = Agent(model=model, instance_id=instance_id)
-        history = agent.run(issue_description=format_task_prompt(instance))
+        agent.run(issue_description=format_task_prompt(instance))
 
         exit_reason = _infer_exit_reason(agent)
 
