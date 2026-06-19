@@ -21,7 +21,6 @@ def tag_failure(result: TaskResult, grade: str) -> str:
     - environment_failure: exit_reason == "error" (container/setup crash)
     - timeout: exit_reason == "timeout"
     - max_steps: exit_reason == "max_steps" (agent ran out of budget)
-    - max_submissions: hit submission cap without passing tests
     - no_patch: agent exited cleanly but produced no code changes
     - tests_failed: agent submitted but tests didn't pass (default)
     """
@@ -33,8 +32,6 @@ def tag_failure(result: TaskResult, grade: str) -> str:
         return "timeout"
     if result.exit_reason == "max_steps":
         return "max_steps"
-    if result.exit_reason == "max_submissions":
-        return "max_submissions"
     if not result.model_patch or not result.model_patch.strip():
         return "no_patch"
     return "tests_failed"

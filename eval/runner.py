@@ -159,10 +159,8 @@ def run_single_task(instance: dict, config: EvalConfig, output_dir: str) -> Task
 
 def _infer_exit_reason(agent) -> str:
     """Determine why the agent loop exited based on agent state."""
-    from config import MAX_STEPS, MAX_SUBMISSIONS
+    from config import MAX_STEPS
 
-    if agent.submit_count >= MAX_SUBMISSIONS:
-        return "max_submissions"
     if agent.step_count >= MAX_STEPS:
         return "max_steps"
     return "submitted"
