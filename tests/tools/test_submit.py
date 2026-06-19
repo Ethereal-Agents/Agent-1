@@ -27,6 +27,7 @@ class MockEnv:
     def __init__(self, commit):
         self.initial_commit = commit
 
+
 def test_finish_tool_initial_commit(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     os.system("git init")
@@ -37,7 +38,7 @@ def test_finish_tool_initial_commit(tmp_path, monkeypatch):
     tool = FinishTool()
     tool.env = MockEnv(initial_commit)
     result = tool.run(summary="Fixed it!")
-    
+
     assert "[AGENT_FINISHED]" in result
     with open("fix.patch", "r", encoding="utf-8") as f:
         patch_content = f.read()
