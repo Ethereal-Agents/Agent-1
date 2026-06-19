@@ -8,7 +8,7 @@ eval:
   namespace: ""               # set empty for ARM/OrbStack local image builds
 
 agent:
-  model: "gemini/gemma-4-31b-it"
+  model: "claude-haiku-4-5-20251001"
 
 budget:
   warn_threshold_usd: 5.0

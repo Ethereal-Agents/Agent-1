@@ -2,8 +2,8 @@ agent:
   max_steps: 200
   fallback_compaction_limit: 60000
   compaction_token_fraction: 0.75
-  default_model: "openrouter/deepseek/deepseek-v4-flash"
-  compaction_model: "openrouter/deepseek/deepseek-v4-flash"
+  default_model: "claude-haiku-4-5-20251001"
+  compaction_model: "claude-haiku-4-5-20251001"
 paths:
   runs_dir: "runs"
   system_prompt_file: "prompts/system_prompt.txt"
