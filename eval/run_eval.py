@@ -68,8 +68,6 @@ def _load_eval_config(args) -> "EvalConfig":
         cfg.output_dir = eval_sec.get("output_dir", cfg.output_dir)
         cfg.namespace = eval_sec.get("namespace", cfg.namespace)
         cfg.model = agent_sec.get("model", cfg.model)
-        cfg.max_steps = agent_sec.get("max_steps", cfg.max_steps)
-        cfg.max_submissions = agent_sec.get("max_submissions", cfg.max_submissions)
         cfg.budget_warn_threshold = budget_sec.get("warn_threshold_usd", cfg.budget_warn_threshold)
 
     # CLI overrides

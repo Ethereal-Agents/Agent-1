@@ -16,8 +16,6 @@ class EvalConfig:
     namespace: str = ""
     # Agent
     model: str = "gemini/gemma-4-31b-it"
-    max_steps: int = 100
-    max_submissions: int = 3
     # Budget
     budget_warn_threshold: float = 5.0
     budget_warn_interval_pct: list = field(default_factory=lambda: [50, 80, 100])

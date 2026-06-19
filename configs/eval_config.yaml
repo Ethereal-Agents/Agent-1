@@ -9,8 +9,6 @@ eval:
 
 agent:
   model: "gemini/gemma-4-31b-it"
-  max_steps: 100
-  max_submissions: 3
 
 budget:
   warn_threshold_usd: 5.0
