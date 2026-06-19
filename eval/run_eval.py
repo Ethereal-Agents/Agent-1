@@ -117,21 +117,32 @@ def main():
     )
     parser.add_argument("--dataset", type=str, default=None)
     parser.add_argument("--split", type=str, default=None)
-    parser.add_argument("--tier", type=int, choices=[10, 50, 300], default=None,
-                        help="Load predefined instance subset from configs/tier_N.json")
-    parser.add_argument("--instance-ids", type=str, default=None,
-                        help="Comma-separated instance IDs")
+    parser.add_argument(
+        "--tier",
+        type=int,
+        choices=[10, 50, 300],
+        default=None,
+        help="Load predefined instance subset from configs/tier_N.json",
+    )
+    parser.add_argument(
+        "--instance-ids", type=str, default=None, help="Comma-separated instance IDs"
+    )
     parser.add_argument("--model", type=str, default=None)
-    parser.add_argument("--run-id", type=str, default=None,
-                        help="Unique run identifier (auto-generated if omitted)")
+    parser.add_argument(
+        "--run-id", type=str, default=None, help="Unique run identifier (auto-generated if omitted)"
+    )
     parser.add_argument("--output-dir", type=str, default=None)
     parser.add_argument("--max-workers-inference", type=int, default=None)
     parser.add_argument("--max-workers-grading", type=int, default=None)
     parser.add_argument("--timeout", type=int, default=None)
     parser.add_argument("--inference-only", action="store_true")
     parser.add_argument("--grade-only", action="store_true")
-    parser.add_argument("--predictions", type=str, default=None,
-                        help="Path to predictions.jsonl (required for --grade-only)")
+    parser.add_argument(
+        "--predictions",
+        type=str,
+        default=None,
+        help="Path to predictions.jsonl (required for --grade-only)",
+    )
     parser.add_argument("--namespace", type=str, default=None)
     parser.add_argument("--budget-warn", type=float, default=None)
 
@@ -149,17 +160,19 @@ def main():
 
     config = _load_eval_config(args)
 
-    run_id = args.run_id or f"eval_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
+    run_id = (
+        args.run_id or f"eval_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
+    )
     run_output_dir = os.path.join(base_dir, config.output_dir, run_id)
     os.makedirs(run_output_dir, exist_ok=True)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("recall-agent eval harness")
     print(f"Run ID:  {run_id}")
     print(f"Model:   {config.model}")
     print(f"Dataset: {config.dataset} ({config.split})")
     print(f"Output:  {run_output_dir}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     predictions_path = os.path.join(run_output_dir, "predictions.jsonl")
 
@@ -214,13 +227,16 @@ def main():
             print(f"\nGrading complete. Resolved: {grade_report.resolved}/{grade_report.total}")
     else:
         print("\nInference-only mode. Skipping grading.")
-        print(f"To grade later: python -m eval.run_eval --grade-only "
-              f"--predictions {predictions_path} --run-id {run_id}")
+        print(
+            f"To grade later: python -m eval.run_eval --grade-only "
+            f"--predictions {predictions_path} --run-id {run_id}"
+        )
 
 
 def _save_results_json(results: list, output_dir: str) -> None:
     """Persist TaskResult list as JSON for later grade-only runs."""
     from dataclasses import asdict
+
     path = os.path.join(output_dir, "results.json")
     with open(path, "w") as f:
         json.dump([asdict(r) for r in results], f, indent=2)
@@ -229,6 +245,7 @@ def _save_results_json(results: list, output_dir: str) -> None:
 def _load_results_json(output_dir: str) -> list:
     """Load persisted TaskResult list, returns empty list if not found."""
     from eval.models import TaskResult
+
     path = os.path.join(output_dir, "results.json")
     if not os.path.exists(path):
         return []
@@ -238,15 +255,17 @@ def _load_results_json(output_dir: str) -> list:
 
 
 def _print_summary(metrics) -> None:
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"RESULTS — {metrics.run_id}")
-    print(f"{'='*60}")
-    print(f"  pass@1:          {metrics.pass_at_1:.1%} ({metrics.resolved}/{metrics.total_instances})")
+    print(f"{'=' * 60}")
+    print(
+        f"  pass@1:          {metrics.pass_at_1:.1%} ({metrics.resolved}/{metrics.total_instances})"
+    )
     print(f"  cost (total):    ${metrics.cost.total:.4f}")
     print(f"  cost (per task): ${metrics.cost.mean:.4f} avg")
     print(f"  tokens (avg):    {metrics.tokens.mean:,.0f}")
     print(f"  steps (avg):     {metrics.turns.mean:.1f}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
 
 if __name__ == "__main__":

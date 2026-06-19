@@ -13,6 +13,7 @@ from eval.models import EvalMetrics, GradeReport, StatSummary, TaskResult
 # No LLM calls — pure signal from agent state and trajectory metadata.
 # ---------------------------------------------------------------------------
 
+
 def tag_failure(result: TaskResult, grade: str) -> str:
     """Return a single failure tag for a non-resolved instance.
 
@@ -53,6 +54,7 @@ def tag_failures(results: list[TaskResult], grade_report: GradeReport) -> list[d
 # Metrics
 # ---------------------------------------------------------------------------
 
+
 def compute_metrics(
     results: list[TaskResult], grade_report: GradeReport, run_id: str
 ) -> EvalMetrics:
@@ -79,6 +81,7 @@ def compute_metrics(
 # ---------------------------------------------------------------------------
 # Report generation
 # ---------------------------------------------------------------------------
+
 
 def generate_report(
     metrics: EvalMetrics,
@@ -116,21 +119,31 @@ def _write_instances_csv(
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(
-            ["instance_id", "grade", "tag", "exit_reason",
-             "steps", "tokens", "cost_usd", "duration_s"]
+            [
+                "instance_id",
+                "grade",
+                "tag",
+                "exit_reason",
+                "steps",
+                "tokens",
+                "cost_usd",
+                "duration_s",
+            ]
         )
         for r in results:
             grade = grade_report.per_instance.get(r.instance_id, "N/A")
-            writer.writerow([
-                r.instance_id,
-                grade,
-                tag_map.get(r.instance_id, ""),
-                r.exit_reason,
-                r.total_steps,
-                r.total_tokens,
-                f"{r.total_cost:.4f}",
-                f"{r.duration_seconds:.1f}",
-            ])
+            writer.writerow(
+                [
+                    r.instance_id,
+                    grade,
+                    tag_map.get(r.instance_id, ""),
+                    r.exit_reason,
+                    r.total_steps,
+                    r.total_tokens,
+                    f"{r.total_cost:.4f}",
+                    f"{r.duration_seconds:.1f}",
+                ]
+            )
 
 
 def _write_failures_json(failure_tags: list[dict], output_dir: str) -> None:

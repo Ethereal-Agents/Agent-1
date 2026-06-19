@@ -213,9 +213,9 @@ def run_batch(
     if config.max_workers_inference <= 1:
         # Sequential — simple and easy to debug
         for i, instance in enumerate(instances, 1):
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"Instance {i}/{total}: {instance['instance_id']}")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
             result = run_single_task(instance, config, output_dir)
             results.append(result)
             cumulative_cost += result.total_cost

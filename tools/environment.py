@@ -105,8 +105,10 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
         if check.exit_code == 0:
             return  # Already installed
 
-        print(f"[DockerEnvironment] ripgrep not found in {self.container.short_id}. Attempting to install as root...")
-        
+        print(
+            f"[DockerEnvironment] ripgrep not found in {self.container.short_id}. Attempting to install as root..."
+        )
+
         # Determine package manager and install
         if self.container.exec_run("which apt-get").exit_code == 0:
             self.container.exec_run("apt-get update", user="root")
@@ -119,7 +121,9 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
         elif self.container.exec_run("which yum").exit_code == 0:
             self.container.exec_run("yum install -y ripgrep", user="root")
         else:
-            print("[DockerEnvironment] WARNING: Could not detect package manager. ripgrep installation failed. Search tool may not work.")
+            print(
+                "[DockerEnvironment] WARNING: Could not detect package manager. ripgrep installation failed. Search tool may not work."
+            )
 
     def cleanup(self):
         """Stops and removes the container if this environment spun it up."""

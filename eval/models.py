@@ -25,13 +25,13 @@ class EvalConfig:
 class TaskResult:
     instance_id: str
     model_name_or_path: str
-    model_patch: str | None         # git diff output; None if agent made no changes
-    exit_reason: str                 # "submitted" | "max_steps" | "error" | "timeout"
+    model_patch: str | None  # git diff output; None if agent made no changes
+    exit_reason: str  # "submitted" | "max_steps" | "error" | "timeout"
     total_steps: int
     total_tokens: int
     total_cost: float
     duration_seconds: float
-    trajectory_path: str             # absolute path to JSONL trajectory file
+    trajectory_path: str  # absolute path to JSONL trajectory file
 
 
 @dataclass
@@ -41,8 +41,8 @@ class GradeReport:
     resolved: int
     unresolved: int
     errored: int
-    resolution_rate: float           # 0.0–1.0
-    per_instance: dict               # {instance_id: "resolved" | "unresolved" | "error"}
+    resolution_rate: float  # 0.0–1.0
+    per_instance: dict  # {instance_id: "resolved" | "unresolved" | "error"}
 
 
 @dataclass
@@ -55,6 +55,7 @@ class StatSummary:
     @classmethod
     def from_values(cls, values: list[float]) -> "StatSummary":
         import statistics
+
         if not values:
             return cls(0.0, 0.0, 0.0, 0.0)
         sorted_vals = sorted(values)
@@ -70,7 +71,7 @@ class StatSummary:
 @dataclass
 class EvalMetrics:
     run_id: str
-    pass_at_1: float                  # primary metric: % resolved
+    pass_at_1: float  # primary metric: % resolved
     total_instances: int
     resolved: int
     unresolved: int
@@ -79,4 +80,4 @@ class EvalMetrics:
     tokens: StatSummary
     turns: StatSummary
     duration: StatSummary
-    exit_reason_counts: dict          # {"submitted": N, "max_steps": N, ...}
+    exit_reason_counts: dict  # {"submitted": N, "max_steps": N, ...}

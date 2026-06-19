@@ -90,10 +90,11 @@ def parse_results(run_id: str, output_dir: str) -> GradeReport:
                 fpath = os.path.join(search_dir, fname)
                 with open(fpath) as f:
                     report_data = json.load(f)
-                
+
                 # If swebench dumped it in the root folder, move it to output_dir to keep workspace clean
                 if search_dir == ".":
                     import shutil
+
                     try:
                         target_path = os.path.join(output_dir, fname)
                         shutil.move(fpath, target_path)
@@ -145,8 +146,13 @@ def _parse_per_instance_logs(run_id: str, output_dir: str) -> GradeReport:
     if not os.path.exists(log_base):
         print(f"WARNING: No swebench results found at {log_base} or {output_dir}")
         return GradeReport(
-            run_id=run_id, total=0, resolved=0, unresolved=0, errored=0,
-            resolution_rate=0.0, per_instance={},
+            run_id=run_id,
+            total=0,
+            resolved=0,
+            unresolved=0,
+            errored=0,
+            resolution_rate=0.0,
+            per_instance={},
         )
 
     # Walk: logs/run_evaluation/<run_id>/<model>/<instance_id>/report.json
