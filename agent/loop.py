@@ -281,7 +281,9 @@ class Agent:
             current_tokens = 0
 
         if current_tokens > COMPACTION_TOKEN_THRESHOLD:
-            print(f"\n[Memory Compaction] Triggering Sawtooth compaction... (Steps: {len(self.history)}, Tokens: {current_tokens})")
+            print(
+                f"\n[Memory Compaction] Triggering Sawtooth compaction... (Steps: {len(self.history)}, Tokens: {current_tokens})"
+            )
             head = self.history[:2]  # Keep System Prompt and original User Task
 
             # Ensure tail starts with an assistant or user message to prevent Anthropic API errors
