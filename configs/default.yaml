@@ -1,6 +1,6 @@
 agent:
   max_steps: 200
-  compaction_threshold: 100
+  compaction_token_threshold: 60000
   default_model: "openrouter/deepseek/deepseek-v4-flash"
   compaction_model: "openrouter/deepseek/deepseek-v4-flash"
 paths:

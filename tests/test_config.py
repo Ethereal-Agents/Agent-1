@@ -15,4 +15,3 @@ def test_get_compaction_prompt():
         result = config.get_compaction_prompt()
         m.assert_called_once_with(config.COMPACTION_PROMPT_PATH, "r", encoding="utf-8")
         assert result == "mock_compaction_prompt"
-

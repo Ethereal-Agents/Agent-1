@@ -3,7 +3,6 @@ from unittest.mock import patch
 import pytest
 
 from agent.loop import Agent, run_agent
-from config import COMPACTION_THRESHOLD
 
 
 @pytest.fixture
@@ -11,7 +10,6 @@ def mock_config():
     with (
         patch("agent.loop.get_system_prompt", return_value="sys prompt"),
         patch("agent.loop.get_compaction_prompt", return_value="compaction prompt"),
-        patch("agent.loop.COMPACTION_THRESHOLD", 15),
         patch("agent.loop.append_trajectory_step"),
         patch("agent.loop.dump_run_config"),
         patch.object(Agent, "_capture_test_baseline", return_value=set()),
@@ -115,9 +113,23 @@ class TestAgentLLM:
 
     def test_call_llm_failure(self, mock_config):
         agent = Agent()
-        with patch("agent.loop.litellm.completion", side_effect=Exception("API Down")):
-            ret = agent._call_llm()
-            assert ret is None
+        with patch("agent.loop.litellm.completion", side_effect=Exception("API Error")):
+            result = agent._call_llm()
+            assert result is None
+
+    def test_call_llm_reasoning_no_content(self, mock_config):
+        agent = Agent()
+        class Msg:
+            content = None
+            reasoning_content = "some reasoning"
+            tool_calls = None
+            def model_dump(self, exclude_none=True):
+                return {} # content is missing
+        msg = Msg()
+        with patch("agent.loop.litellm.completion", return_value=MockResponse(msg)):
+            result = agent._call_llm()
+            # Ensure it added content to dumped dict
+            assert agent.history[-1]["content"] == "some reasoning"
 
     def test_call_llm_sliding_window_cache_string(self, mock_config):
         agent = Agent()
@@ -262,6 +274,8 @@ class TestAgentMemory:
         resp = MockResponse(msg, MockUsage())
 
         with (
+            patch("agent.loop.COMPACTION_TOKEN_THRESHOLD", 5),
+            patch("agent.loop.litellm.token_counter", return_value=10),
             patch("agent.loop.litellm.completion", return_value=resp) as mock_completion,
             patch("agent.loop.litellm.completion_cost", return_value=0.02),
         ):
@@ -281,11 +295,13 @@ class TestAgentMemory:
     def test_compact_memory_failure(self, mock_config):
         agent = Agent()
         agent.history = [{"role": "sys", "content": "1"}, {"role": "user", "content": "2"}]
-        for i in range(COMPACTION_THRESHOLD):
+        for i in range(15):
             role = "assistant" if i % 2 == 0 else "tool"
             agent.history.append({"role": role, "content": "c"})
 
-        with patch("agent.loop.litellm.completion", side_effect=Exception("API failure")):
+        with patch("agent.loop.COMPACTION_TOKEN_THRESHOLD", 5), \
+             patch("agent.loop.litellm.token_counter", return_value=10), \
+             patch("agent.loop.litellm.completion", side_effect=Exception("API failure")):
             agent._compact_memory()
 
         assert "(Summarization failed)" in agent.history[2]["content"]
@@ -298,7 +314,7 @@ class TestAgentMemory:
             pass
 
         agent.history = [{"role": "sys", "content": "1"}, {"role": "user", "content": "2"}]
-        for i in range(COMPACTION_THRESHOLD):
+        for i in range(15):
             role = "assistant" if i % 2 == 0 else "tool"
             agent.history.append({"role": role, "content": Unserializable()})
 
@@ -306,6 +322,8 @@ class TestAgentMemory:
         resp = MockResponse(msg, MockUsage())
 
         with (
+            patch("agent.loop.COMPACTION_TOKEN_THRESHOLD", 5),
+            patch("agent.loop.litellm.token_counter", return_value=10),
             patch("agent.loop.litellm.completion", return_value=resp),
             patch("agent.loop.litellm.completion_cost", return_value=0.0),
         ):
@@ -404,3 +422,76 @@ def test_run_agent_wrapper(mock_config):
         res = run_agent("issue", "model_x", "id_y")
         assert res == [{"msg": "history"}]
         mock_run.assert_called_once_with("issue")
+
+
+class TestExtractReasoning:
+    def test_extract_reasoning_content(self):
+        from agent.loop import _extract_reasoning
+        class Msg:
+            content = None
+            reasoning_content = "reasoning1"
+        assert _extract_reasoning(Msg()) == "reasoning1"
+
+    def test_extract_provider_specific(self):
+        from agent.loop import _extract_reasoning
+        class Msg:
+            content = None
+            reasoning_content = None
+            provider_specific_fields = {"reasoning": "reasoning2"}
+        assert _extract_reasoning(Msg()) == "reasoning2"
+
+
+class TestAgentBaseline:
+    def test_capture_baseline_no_failures(self):
+        with patch("agent.loop.get_system_prompt", return_value="sys"), \
+             patch("agent.loop.get_compaction_prompt", return_value="comp"):
+            agent = Agent()
+            output = "All tests passed successfully."
+            with patch("agent.loop.execute_tool", return_value=output):
+                assert agent._capture_test_baseline() == set()
+
+    def test_capture_baseline_with_failures(self):
+        with patch("agent.loop.get_system_prompt", return_value="sys"), \
+             patch("agent.loop.get_compaction_prompt", return_value="comp"):
+            agent = Agent()
+            output = '<test name="test_foo.test_bar">\nTraceback here\n</test>\n<test name="test_baz">\nTrace\n</test>'
+            with patch("agent.loop.execute_tool", return_value=output):
+                assert agent._capture_test_baseline() == {"test_foo.test_bar", "test_baz"}
+
+    def test_capture_baseline_exception(self):
+        with patch("agent.loop.get_system_prompt", return_value="sys"), \
+             patch("agent.loop.get_compaction_prompt", return_value="comp"):
+            agent = Agent()
+            with patch("agent.loop.execute_tool", side_effect=Exception("Tool failed")):
+                assert agent._capture_test_baseline() == set()
+
+    def test_run_with_baseline_failures(self, mock_config):
+        agent = Agent()
+        with patch.object(Agent, "_capture_test_baseline", return_value={"test_foo", "test_bar"}), \
+             patch.object(agent, "_call_llm", return_value=None), \
+             patch.object(agent, "_finalize_run"):
+            agent.run("test issue")
+        
+        # Verify the prompt includes the baseline failures text
+        user_prompt = agent.history[1]["content"][0]["text"]
+        assert "test_foo" in user_prompt
+        assert "test_bar" in user_prompt
+
+
+class TestCompactionTokens:
+    def test_compact_memory_token_threshold(self, mock_config):
+        agent = Agent()
+        agent.history = [{"role": "user", "content": "hello"}] * 10
+        with patch("agent.loop.COMPACTION_TOKEN_THRESHOLD", 5), \
+             patch("agent.loop.litellm.token_counter", return_value=10):
+            agent._compact_memory()
+            assert len(agent.history) == 8  # head(2) + tail(5) + summary(1) = 8
+
+    def test_compact_memory_token_counter_exception(self, mock_config):
+        agent = Agent()
+        # Token counter crashes -> returns 0, so doesn't trigger token threshold
+        agent.history = [{"role": "user", "content": "hello"}] * 5
+        with patch("agent.loop.COMPACTION_TOKEN_THRESHOLD", 5), \
+             patch("agent.loop.litellm.token_counter", side_effect=Exception("API down")):
+            agent._compact_memory()
+            assert len(agent.history) == 5

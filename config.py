@@ -21,7 +21,7 @@ _config = load_config()
 
 # Agent settings
 MAX_STEPS = _config.get("agent", {}).get("max_steps", 30)
-COMPACTION_THRESHOLD = _config.get("agent", {}).get("compaction_threshold", 15)
+COMPACTION_TOKEN_THRESHOLD = _config.get("agent", {}).get("compaction_token_threshold", 60000)
 DEFAULT_MODEL = _config.get("agent", {}).get("default_model", "haiku-4.5")
 COMPACTION_MODEL = _config.get("agent", {}).get("compaction_model", "gemini/gemini-3.1-flash-lite")
 
@@ -44,4 +44,3 @@ def get_system_prompt() -> str:
 def get_compaction_prompt() -> str:
     with open(COMPACTION_PROMPT_PATH, "r", encoding="utf-8") as f:
         return f.read()
-

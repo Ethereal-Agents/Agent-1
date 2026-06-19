@@ -8,7 +8,7 @@ import litellm
 
 from config import (
     COMPACTION_MODEL,
-    COMPACTION_THRESHOLD,
+    COMPACTION_TOKEN_THRESHOLD,
     DEFAULT_MODEL,
     MAX_STEPS,
     _config,
@@ -17,6 +17,20 @@ from config import (
 )
 from memory.trajectory import append_trajectory_step, dump_run_config, save_metrics
 from tools.registry import execute_tool, get_env_system_prompt, get_openai_tools
+
+
+def _extract_reasoning(message: Any) -> Any:
+    """Extract reasoning/content robustly from a LiteLLM message."""
+    reasoning = getattr(message, "content", None)
+    if not reasoning and getattr(message, "reasoning_content", None):
+        reasoning = message.reasoning_content
+    elif (
+        not reasoning
+        and getattr(message, "provider_specific_fields", None)
+        and isinstance(message.provider_specific_fields, dict)
+    ):
+        reasoning = message.provider_specific_fields.get("reasoning")
+    return reasoning
 
 
 class Agent:
@@ -119,13 +133,8 @@ class Agent:
             if not message:
                 break
 
-            # Extract reasoning/content robustly
-            reasoning = getattr(message, "content", None)
-            if not reasoning and getattr(message, "reasoning_content", None):
-                reasoning = message.reasoning_content
-            elif not reasoning and getattr(message, "provider_specific_fields", None) and isinstance(message.provider_specific_fields, dict):
-                reasoning = message.provider_specific_fields.get("reasoning")
-            
+            reasoning = _extract_reasoning(message)
+
             # Print reasoning if available
             if reasoning:
                 print(f"\n[Reasoning]: {reasoning.strip()}")
@@ -183,14 +192,10 @@ class Agent:
         message = response.choices[0].message
 
         dumped = message.model_dump(exclude_none=True)
-        
+
         # Ensure reasoning is preserved in the history's content field
-        reasoning = getattr(message, "content", None)
-        if not reasoning and getattr(message, "reasoning_content", None):
-            reasoning = message.reasoning_content
-        elif not reasoning and getattr(message, "provider_specific_fields", None) and isinstance(message.provider_specific_fields, dict):
-            reasoning = message.provider_specific_fields.get("reasoning")
-            
+        reasoning = _extract_reasoning(message)
+
         if reasoning and "content" not in dumped:
             dumped["content"] = reasoning
 
@@ -269,9 +274,14 @@ class Agent:
 
     def _compact_memory(self):
         # --- "Sawtooth" Memory Compaction ---
-        # If history gets too long, compress the middle to prevent LLM amnesia and save tokens.
-        if len(self.history) > COMPACTION_THRESHOLD:
-            print("\n[Memory Compaction] Triggering Sawtooth compaction...")
+        # If history gets too long or exceeds token limit, compress the middle to prevent LLM amnesia and save tokens.
+        try:
+            current_tokens = litellm.token_counter(model=self.model, messages=self.history)
+        except Exception:
+            current_tokens = 0
+
+        if current_tokens > COMPACTION_TOKEN_THRESHOLD:
+            print(f"\n[Memory Compaction] Triggering Sawtooth compaction... (Steps: {len(self.history)}, Tokens: {current_tokens})")
             head = self.history[:2]  # Keep System Prompt and original User Task
 
             # Ensure tail starts with an assistant or user message to prevent Anthropic API errors

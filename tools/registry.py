@@ -4,9 +4,9 @@ from tools.base import BaseTool
 from tools.bash import BashTool
 from tools.environment import ExecutionEnvironment
 from tools.file_ops import EditTool, ReadFileTool
+from tools.finish import FinishTool
 from tools.run_tests import RunTestsTool
 from tools.search import CodeSearchTool
-from tools.finish import FinishTool
 
 # Instantiate all tools
 TOOLS: List[BaseTool] = [
