@@ -96,6 +96,31 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
             if result.returncode != 0:
                 raise RuntimeError(f"Failed to run setup_command: {result.stderr}")
 
+        self._ensure_dependencies()
+
+    def _ensure_dependencies(self):
+        """Ensure critical agent dependencies (like ripgrep) exist in the container."""
+        # Check if rg exists
+        check = self.container.exec_run("which rg")
+        if check.exit_code == 0:
+            return  # Already installed
+
+        print(f"[DockerEnvironment] ripgrep not found in {self.container.short_id}. Attempting to install as root...")
+        
+        # Determine package manager and install
+        if self.container.exec_run("which apt-get").exit_code == 0:
+            self.container.exec_run("apt-get update", user="root")
+            self.container.exec_run("apt-get install -y ripgrep", user="root")
+        elif self.container.exec_run("which apk").exit_code == 0:
+            self.container.exec_run("apk update", user="root")
+            self.container.exec_run("apk add ripgrep", user="root")
+        elif self.container.exec_run("which pacman").exit_code == 0:
+            self.container.exec_run("pacman -Sy --noconfirm ripgrep", user="root")
+        elif self.container.exec_run("which yum").exit_code == 0:
+            self.container.exec_run("yum install -y ripgrep", user="root")
+        else:
+            print("[DockerEnvironment] WARNING: Could not detect package manager. ripgrep installation failed. Search tool may not work.")
+
     def cleanup(self):
         """Stops and removes the container if this environment spun it up."""
         if self._owns_container and getattr(self, "container", None):
