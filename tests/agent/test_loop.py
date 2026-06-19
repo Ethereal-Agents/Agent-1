@@ -127,7 +127,7 @@ class TestAgentLLM:
                 return {} # content is missing
         msg = Msg()
         with patch("agent.loop.litellm.completion", return_value=MockResponse(msg)):
-            result = agent._call_llm()
+            agent._call_llm()
             # Ensure it added content to dumped dict
             assert agent.history[-1]["content"] == "some reasoning"
 
