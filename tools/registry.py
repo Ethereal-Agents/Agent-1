@@ -1,4 +1,15 @@
+import enum
 from typing import Any, Dict, List
+
+
+class ToolName(str, enum.Enum):
+    READ_FILE = "read_file"
+    EDIT_FILE = "edit_file"
+    BASH = "bash"
+    CODE_SEARCH = "code_search"
+    RUN_TESTS = "run_tests"
+    FINISH = "finish"
+
 
 from tools.base import BaseTool
 from tools.bash import BashTool

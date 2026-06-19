@@ -16,7 +16,7 @@ from config import (
     get_system_prompt,
 )
 from memory.trajectory import append_trajectory_step, dump_run_config, save_metrics
-from tools.registry import execute_tool, get_env_system_prompt, get_openai_tools
+from tools.registry import ToolName, execute_tool, get_env_system_prompt, get_openai_tools
 
 
 def _extract_reasoning(message: Any) -> Any:
@@ -214,7 +214,7 @@ class Agent:
 
             print(f"[Tool Call]: {tool_name}({tool_args})")
 
-            if tool_name == "finish":
+            if tool_name == ToolName.FINISH:
                 # Soft guardrail: nudge once if agent never ran tests
                 if not self.has_run_tests and not self.finish_nudged:
                     self.finish_nudged = True
@@ -226,7 +226,7 @@ class Agent:
                     print("[Soft Nudge] Agent finishing without test verification.")
                 else:
                     # Accept the finish
-                    observation = execute_tool("finish", tool_args)
+                    observation = execute_tool(ToolName.FINISH, tool_args)
                     self._append_history(
                         {
                             "role": "tool",
@@ -241,7 +241,7 @@ class Agent:
                 # Standard tool execution
                 observation = execute_tool(tool_name, tool_args)
                 # Track if agent has voluntarily run tests
-                if tool_name == "run_tests":
+                if tool_name == ToolName.RUN_TESTS:
                     self.has_run_tests = True
 
             self._append_history(
@@ -261,7 +261,7 @@ class Agent:
 
         print("[Baseline] Capturing pre-existing test failures...")
         try:
-            result = execute_tool("run_tests", {"targets": []})
+            result = execute_tool(ToolName.RUN_TESTS, {"targets": []})
             failures = set(re.findall(r'<test name="([^"]+)">', result))
             if failures:
                 print(f"[Baseline] {len(failures)} pre-existing test failure(s) detected.")
