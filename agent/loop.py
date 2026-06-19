@@ -8,6 +8,7 @@ import litellm
 
 from config import (
     COMPACTION_MODEL,
+    COMPACTION_TOKEN_FRACTION,
     COMPACTION_TOKEN_THRESHOLD,
     DEFAULT_MODEL,
     MAX_STEPS,
@@ -280,9 +281,18 @@ class Agent:
         except Exception:
             current_tokens = 0
 
-        if current_tokens > COMPACTION_TOKEN_THRESHOLD:
+        model_info = litellm.model_cost.get(self.model, {})
+        max_input = model_info.get("max_input_tokens") or model_info.get("max_tokens")
+
+        if max_input:
+            threshold = int(max_input * COMPACTION_TOKEN_FRACTION)
+        else:
+            threshold = COMPACTION_TOKEN_THRESHOLD
+
+        if current_tokens > threshold:
             print(
-                f"\n[Memory Compaction] Triggering Sawtooth compaction... (Steps: {len(self.history)}, Tokens: {current_tokens})"
+                f"\n[Memory Compaction] Triggering Sawtooth compaction... "
+                f"(Steps: {len(self.history)}, Tokens: {current_tokens}, Threshold: {threshold})"
             )
             head = self.history[:2]  # Keep System Prompt and original User Task
 

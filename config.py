@@ -22,6 +22,7 @@ _config = load_config()
 # Agent settings
 MAX_STEPS = _config.get("agent", {}).get("max_steps", 30)
 COMPACTION_TOKEN_THRESHOLD = _config.get("agent", {}).get("compaction_token_threshold", 60000)
+COMPACTION_TOKEN_FRACTION = _config.get("agent", {}).get("compaction_token_fraction", 0.75)
 DEFAULT_MODEL = _config.get("agent", {}).get("default_model", "haiku-4.5")
 COMPACTION_MODEL = _config.get("agent", {}).get("compaction_model", "gemini/gemini-3.1-flash-lite")
 
