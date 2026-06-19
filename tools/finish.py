@@ -28,9 +28,14 @@ class FinishTool(BaseTool):
             # Stage all files so git tracks newly created files
             subprocess.run(["git", "add", "-A"], check=True)
 
-            # Generate a comprehensive patch against HEAD
+            initial_commit = getattr(self.env, "initial_commit", None)
+
+            # Generate a comprehensive patch against the initial commit
             with open("fix.patch", "w", encoding="utf-8") as f:
-                subprocess.run(["git", "diff", "--staged"], stdout=f, text=True, check=True)
+                if initial_commit:
+                    subprocess.run(["git", "diff", initial_commit], stdout=f, text=True, check=True)
+                else:
+                    subprocess.run(["git", "diff", "--staged"], stdout=f, text=True, check=True)
 
             return (
                 f"[AGENT_FINISHED] Task completed successfully.\n"
