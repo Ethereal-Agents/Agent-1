@@ -1,9 +1,0 @@
-TESTS FAILED. 
-
-Logs:
-{test_results}
-
-INSTRUCTIONS:
-1. Analyze the test failures carefully. 
-2. If the failures were caused by your recent changes (e.g., syntax errors, logic bugs you introduced), please reflect and try to fix them.
-3. If you determine the failures are NOT FIXABLE or PRE-EXISTING, unrelated to your task, or caused by missing environment dependencies (e.g., ModuleNotFoundError), DO NOT attempt to fix them. Instead, provide a final summary of your work, explain why the tests are failing, and stop calling tools to finish the task.

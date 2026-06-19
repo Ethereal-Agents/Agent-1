@@ -21,8 +21,8 @@ _config = load_config()
 
 # Agent settings
 MAX_STEPS = _config.get("agent", {}).get("max_steps", 30)
-MAX_SUBMISSIONS = _config.get("agent", {}).get("max_submissions", 3)
-COMPACTION_THRESHOLD = _config.get("agent", {}).get("compaction_threshold", 15)
+FALLBACK_COMPACTION_LIMIT = _config.get("agent", {}).get("fallback_compaction_limit", 60000)
+COMPACTION_TOKEN_FRACTION = _config.get("agent", {}).get("compaction_token_fraction", 0.75)
 DEFAULT_MODEL = _config.get("agent", {}).get("default_model", "haiku-4.5")
 COMPACTION_MODEL = _config.get("agent", {}).get("compaction_model", "gemini/gemini-3.1-flash-lite")
 
@@ -35,10 +35,6 @@ COMPACTION_PROMPT_PATH = os.path.join(
     BASE_DIR,
     _config.get("paths", {}).get("compaction_prompt_file", "prompts/compaction_prompt.txt"),
 )
-TEST_FAILURE_PROMPT_PATH = os.path.join(
-    BASE_DIR,
-    _config.get("paths", {}).get("test_failure_prompt_file", "prompts/test_failure_prompt.txt"),
-)
 
 
 def get_system_prompt() -> str:
@@ -49,9 +45,3 @@ def get_system_prompt() -> str:
 def get_compaction_prompt() -> str:
     with open(COMPACTION_PROMPT_PATH, "r", encoding="utf-8") as f:
         return f.read()
-
-
-def get_test_failure_prompt(test_results: str) -> str:
-    with open(TEST_FAILURE_PROMPT_PATH, "r", encoding="utf-8") as f:
-        template = f.read()
-    return template.replace("{test_results}", test_results)

@@ -105,6 +105,11 @@ def main():
     else:
         env = LocalEnvironment()
 
+    import subprocess
+
+    result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)
+    env.initial_commit = result.stdout.strip() if result.returncode == 0 else None
+
     initialize_tools(env)
 
     # 3. Start the ReAct Loop

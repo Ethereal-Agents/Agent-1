@@ -1,12 +1,23 @@
+import enum
 from typing import Any, Dict, List
 
 from tools.base import BaseTool
 from tools.bash import BashTool
 from tools.environment import ExecutionEnvironment
 from tools.file_ops import EditTool, ReadFileTool
+from tools.finish import FinishTool
 from tools.run_tests import RunTestsTool
 from tools.search import CodeSearchTool
-from tools.submit_patch import SubmitPatchTool
+
+
+class ToolName(str, enum.Enum):
+    READ_FILE = "read_file"
+    EDIT_FILE = "edit_file"
+    BASH = "bash"
+    CODE_SEARCH = "code_search"
+    RUN_TESTS = "run_tests"
+    FINISH = "finish"
+
 
 # Instantiate all tools
 TOOLS: List[BaseTool] = [
@@ -15,7 +26,7 @@ TOOLS: List[BaseTool] = [
     BashTool(),
     CodeSearchTool(),
     RunTestsTool(),
-    SubmitPatchTool(),
+    FinishTool(),
 ]
 
 # Map tool name to tool instance for fast execution
