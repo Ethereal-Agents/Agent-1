@@ -68,6 +68,12 @@ class TestAgentInit:
         assert agent.finish_nudged is False
         assert agent.baseline_failures == set()
         assert agent.cumulative_tokens == 0
+
+    def test_agent_init_dynamic_threshold(self, mock_config):
+        with patch("agent.loop.litellm.model_cost", {"test-model": {"max_input_tokens": 10000}}):
+            agent = Agent(model="test-model")
+            assert agent.compaction_threshold == 7500
+
         assert agent.cumulative_cost == 0.0
 
 
