@@ -9,8 +9,8 @@ import litellm
 from config import (
     COMPACTION_MODEL,
     COMPACTION_TOKEN_FRACTION,
-    COMPACTION_TOKEN_THRESHOLD,
     DEFAULT_MODEL,
+    FALLBACK_COMPACTION_LIMIT,
     MAX_STEPS,
     _config,
     get_compaction_prompt,
@@ -64,7 +64,7 @@ class Agent:
         if max_input:
             self.compaction_threshold = int(max_input * COMPACTION_TOKEN_FRACTION)
         else:
-            self.compaction_threshold = COMPACTION_TOKEN_THRESHOLD
+            self.compaction_threshold = FALLBACK_COMPACTION_LIMIT
         self.full_history: List[Dict[str, Any]] = []
 
         self.step_count = 0
