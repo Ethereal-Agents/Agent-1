@@ -31,6 +31,8 @@ class MockEnv:
 def test_finish_tool_initial_commit(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     os.system("git init")
+    os.system("git config user.email 'test@example.com'")
+    os.system("git config user.name 'Test User'")
     os.system("echo 'a' > a.txt && git add a.txt && git commit -m 'initial'")
     initial_commit = os.popen("git rev-parse HEAD").read().strip()
     os.system("echo 'b' > b.txt && git add b.txt && git commit -m 'second'")
