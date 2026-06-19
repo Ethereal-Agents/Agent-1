@@ -8,7 +8,17 @@ from agent.loop import run_agent
 def main():
     parser = argparse.ArgumentParser(description="Recall Agent CLI")
     parser.add_argument(
-        "issue", type=str, help="The issue description or task for the agent to solve."
+        "issue",
+        type=str,
+        nargs="?",
+        default=None,
+        help="The issue description or task for the agent to solve.",
+    )
+    parser.add_argument(
+        "--issue-file",
+        type=str,
+        default=None,
+        help="Path to a text file containing the issue description.",
     )
     parser.add_argument(
         "--dir",
@@ -56,6 +66,18 @@ def main():
 
     args = parser.parse_args()
 
+    if args.issue_file:
+        try:
+            with open(args.issue_file, "r", encoding="utf-8") as f:
+                issue_text = f.read()
+        except Exception as e:
+            print(f"Error reading issue file: {e}")
+            sys.exit(1)
+    elif args.issue:
+        issue_text = args.issue
+    else:
+        parser.error("You must provide either an issue string or an --issue-file.")
+
     # 1. Set the working directory
     target_dir = os.path.abspath(args.dir)
     if not os.path.exists(target_dir):
@@ -83,19 +105,23 @@ def main():
     else:
         env = LocalEnvironment()
 
+    import subprocess
+
+    result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)
+    env.initial_commit = result.stdout.strip() if result.returncode == 0 else None
     initialize_tools(env)
 
     # 3. Start the ReAct Loop
     try:
         if args.model:
-            run_agent(args.issue, model=args.model, instance_id=args.instance_id)
+            run_agent(issue_text, model=args.model, instance_id=args.instance_id)
         else:
             # Falls back to DEFAULT_MODEL in config
-            run_agent(args.issue, instance_id=args.instance_id)
+            run_agent(issue_text, instance_id=args.instance_id)
     finally:
         if hasattr(env, "cleanup"):
             env.cleanup()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
