@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "anthropic>=0.109.1",
+    "datasets>=5.0.0",
     "docker>=7.1.0",
     "huggingface-hub>=1.18.0",
     "ipykernel>=7.3.0",
