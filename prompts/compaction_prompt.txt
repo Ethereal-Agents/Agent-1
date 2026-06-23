@@ -7,4 +7,4 @@ Focus on preserving these critical elements:
 4. **Key discoveries**: Important code locations, function names, and structural insights found during exploration.
 5. **Dead ends**: Approaches that were tried and failed, so they are not repeated.
 
-Keep it extremely concise (under 200 words) to save tokens. Use bullet points.
+Keep the summary dense and highly informative. You do not have a strict length limit, but prioritize packing the maximum amount of technical detail into a structured, bulleted format without fluff.
