@@ -1,6 +1,9 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from tools.command_guard import DestructiveCommandGuard
+
 
 @pytest.fixture
 def mock_env():

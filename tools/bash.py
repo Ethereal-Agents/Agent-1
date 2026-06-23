@@ -3,8 +3,8 @@ import subprocess
 from pydantic import BaseModel, Field
 
 from tools.base import BaseTool
-from tools.utils import format_error, truncate_output
 from tools.command_guard import DestructiveCommandGuard
+from tools.utils import format_error, truncate_output
 
 
 class BashArgs(BaseModel):

@@ -1,4 +1,4 @@
-from tools.environment import LocalEnvironment
+from tools.environment import ExecutionEnvironment, LocalEnvironment
 
 
 def test_local_environment_bash():
@@ -21,7 +21,6 @@ def test_local_environment_file_ops(tmp_path):
 # We intentionally omit Docker tests from the core pytest suite so that
 # the unit tests run in <1 second and do not require Docker to be installed/running.
 
-from tools.environment import ExecutionEnvironment
 
 def test_execution_environment_abstract_methods():
     class DummyEnvironment(ExecutionEnvironment):
@@ -47,6 +46,7 @@ def test_local_env_prompt():
 def test_docker_import_error():
     import sys
     from importlib import reload
+
     import tools.environment
     
     # Temporarily hide docker to trigger ImportError
