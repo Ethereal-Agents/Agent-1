@@ -104,7 +104,14 @@ def run_single_task(instance: dict, config: EvalConfig, output_dir: str) -> Task
         )
         print(f"[{instance_id}] Container started: {container.short_id}")
 
-        env = DockerEnvironment(container_id=container.id)
+        conda_prefix = (
+            "if [ -f /opt/miniconda3/etc/profile.d/conda.sh ]; then "
+            "source /opt/miniconda3/etc/profile.d/conda.sh && conda activate testbed || true; "
+            "elif [ -f /miniconda/etc/profile.d/conda.sh ]; then "
+            "source /miniconda/etc/profile.d/conda.sh && conda activate testbed || true; "
+            "fi;"
+        )
+        env = DockerEnvironment(container_id=container.id, command_prefix=conda_prefix)
         initialize_tools(env)
 
         # --- Step 3: Run the agent ---
