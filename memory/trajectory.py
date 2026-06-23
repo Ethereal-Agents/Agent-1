@@ -32,8 +32,9 @@ def append_trajectory_step(instance_id: str, step: Dict[str, Any]):
     """
     Appends a single step to the trajectory JSONL file.
     """
-    os.makedirs(RUNS_DIR, exist_ok=True)
-    instance_dir = os.path.join(RUNS_DIR, instance_id)
+    base_dir = os.environ.get("RECALL_RUNS_DIR", RUNS_DIR)
+    os.makedirs(base_dir, exist_ok=True)
+    instance_dir = os.path.join(base_dir, instance_id)
     os.makedirs(instance_dir, exist_ok=True)
 
     traj_path = os.path.join(instance_dir, "trajectory.jsonl")
@@ -45,8 +46,9 @@ def dump_run_config(instance_id: str, config_data: Dict[str, Any]):
     """
     Dumps the configuration used for this run into the instance directory.
     """
-    os.makedirs(RUNS_DIR, exist_ok=True)
-    instance_dir = os.path.join(RUNS_DIR, instance_id)
+    base_dir = os.environ.get("RECALL_RUNS_DIR", RUNS_DIR)
+    os.makedirs(base_dir, exist_ok=True)
+    instance_dir = os.path.join(base_dir, instance_id)
     os.makedirs(instance_dir, exist_ok=True)
 
     config_path = os.path.join(instance_dir, "config.json")
@@ -58,6 +60,9 @@ def save_metrics(instance_id: str, metrics: Dict[str, Any]):
     """
     Logs high-level metrics to SQLite.
     """
+    if os.environ.get("RECALL_RUNS_DIR"):
+        return  # Skip SQLite during eval runs
+
     init_db()
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()

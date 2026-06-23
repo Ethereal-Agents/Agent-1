@@ -18,6 +18,7 @@ __pycache__/
 runs/
 logs/
 eval_results/
+.DS_Store
 
 # Scratch/Misc
 doc/
@@ -25,6 +26,3 @@ docs/
 notebooks/
 *.smoke-test.json
 *.zip
-relative_test.txt
-get_gold.py
-get_gold_patch.py

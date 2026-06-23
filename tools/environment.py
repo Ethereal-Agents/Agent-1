@@ -57,6 +57,7 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
         container_id: str = None,
         setup_command: str = None,
         mount_dir: str = None,
+        command_prefix: str = "",
     ):
         if docker is None:
             raise ImportError("The 'docker' python package is required. Run 'uv add docker'.")
@@ -71,6 +72,7 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
 
         self.client = docker.from_env()
         self._owns_container = False
+        self.command_prefix = command_prefix
 
         if container_id:
             self.container = self.client.containers.get(container_id)
@@ -96,6 +98,35 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
             if result.returncode != 0:
                 raise RuntimeError(f"Failed to run setup_command: {result.stderr}")
 
+        self._ensure_dependencies()
+
+    def _ensure_dependencies(self):
+        """Ensure critical agent dependencies (like ripgrep) exist in the container."""
+        # Check if rg exists
+        check = self.container.exec_run("which rg")
+        if check.exit_code == 0:
+            return  # Already installed
+
+        print(
+            f"[DockerEnvironment] ripgrep not found in {self.container.short_id}. Attempting to install as root..."
+        )
+
+        # Determine package manager and install
+        if self.container.exec_run("which apt-get").exit_code == 0:
+            self.container.exec_run("apt-get update", user="root")
+            self.container.exec_run("apt-get install -y ripgrep", user="root")
+        elif self.container.exec_run("which apk").exit_code == 0:
+            self.container.exec_run("apk update", user="root")
+            self.container.exec_run("apk add ripgrep", user="root")
+        elif self.container.exec_run("which pacman").exit_code == 0:
+            self.container.exec_run("pacman -Sy --noconfirm ripgrep", user="root")
+        elif self.container.exec_run("which yum").exit_code == 0:
+            self.container.exec_run("yum install -y ripgrep", user="root")
+        else:
+            print(
+                "[DockerEnvironment] WARNING: Could not detect package manager. ripgrep installation failed. Search tool may not work."
+            )
+
     def cleanup(self):
         """Stops and removes the container if this environment spun it up."""
         if self._owns_container and getattr(self, "container", None):
@@ -104,7 +135,8 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
     def run_bash(self, cmd: str, timeout: int) -> subprocess.CompletedProcess:
         # We enforce timeout on the host using a subprocess calling the docker cli
         # This is more reliable for timeout enforcement than the docker python SDK exec_run
-        docker_cmd = ["docker", "exec", self.container.id, "/bin/bash", "-c", cmd]
+        full_cmd = f"{self.command_prefix} {cmd}"
+        docker_cmd = ["docker", "exec", self.container.id, "/bin/bash", "-c", full_cmd]
         return subprocess.run(docker_cmd, capture_output=True, text=True, timeout=timeout)
 
     def read_file(self, path: str) -> str:
@@ -140,7 +172,6 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
             # Make sure target dir exists in container
             target_dir = os.path.dirname(path)
             self.run_bash(f"mkdir -p {target_dir}", timeout=10)
-
             try:
                 result = subprocess.run(
                     ["docker", "cp", local_file_path, f"{self.container.id}:{path}"],
