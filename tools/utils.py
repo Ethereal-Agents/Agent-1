@@ -5,10 +5,11 @@ def truncate_output(text: str, max_len: int = 3000) -> str:
     """
     if len(text) <= max_len:
         return text
-    warning = "\n...[OUTPUT TRUNCATED. Use search or pagination tools to see more]"
-    # Leave room for the warning message so total length is exactly max_len
+    warning = "\n...[OUTPUT TRUNCATED. Use search or pagination tools to see more]...\n"
     keep_len = max_len - len(warning)
-    return text[:keep_len] + warning
+    top_len = keep_len // 5  # Keep 20% of the top
+    bottom_len = keep_len - top_len  # Keep 80% of the bottom for stack traces
+    return text[:top_len] + warning + text[-bottom_len:]
 
 
 def format_error(reason: str, attempted: str, hint: str = None) -> str:

@@ -18,3 +18,4 @@ __pycache__/
 runs/
 logs/
 eval_results/
+.DS_Store
