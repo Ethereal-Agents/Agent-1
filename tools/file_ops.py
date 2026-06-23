@@ -254,9 +254,7 @@ class InsertFileArgs(BaseModel):
             "Use 0 to insert at the beginning of the file."
         ),
     )
-    new_str: str = Field(
-        ..., description="The text to insert. Must include correct indentation."
-    )
+    new_str: str = Field(..., description="The text to insert. Must include correct indentation.")
 
 
 class InsertTool(BaseTool):

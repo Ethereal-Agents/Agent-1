@@ -23,20 +23,24 @@ from tools.registry import ToolName, execute_tool, get_env_system_prompt, get_op
 def _extract_reasoning(message: Any) -> Any:
     """Extract reasoning/content robustly from a LiteLLM message."""
     parts = []
-    
+
     reasoning_content = getattr(message, "reasoning_content", None)
-    if not reasoning_content and getattr(message, "provider_specific_fields", None) and isinstance(message.provider_specific_fields, dict):
+    if (
+        not reasoning_content
+        and getattr(message, "provider_specific_fields", None)
+        and isinstance(message.provider_specific_fields, dict)
+    ):
         reasoning_content = message.provider_specific_fields.get("reasoning")
-        
+
     if reasoning_content and isinstance(reasoning_content, str) and reasoning_content.strip():
         parts.append(reasoning_content.strip())
-        
+
     content = getattr(message, "content", None)
     if content and isinstance(content, str) and content.strip():
         # Avoid printing just "</think>" if it's an artifact of the reasoning model
         if content.strip() != "</think>":
             parts.append(content.strip())
-            
+
     return "\n\n".join(parts) if parts else None
 
 
@@ -163,23 +167,22 @@ class Agent:
                 if self.consecutive_no_tool_calls >= 3:
                     print("\n[HARD STOP] Agent repeatedly failed to call tools.")
                     break
-                
+
                 content_val = getattr(message, "content", None)
                 if not content_val or not content_val.strip():
                     nudge_msg = "Your response was empty and did not contain a tool call. Please use a tool to continue your task, or call `finish` if you are done."
                 else:
                     nudge_msg = "You must use a tool (such as bash, read_file, edit_file) to interact with the environment, or call `finish` if you are completely done."
-                
-                print(f"\n[Soft Nudge] Agent returned no tool calls. Nudging it to continue ({self.consecutive_no_tool_calls}/3).")
-                self._append_history({
-                    "role": "user",
-                    "content": nudge_msg
-                })
+
+                print(
+                    f"\n[Soft Nudge] Agent returned no tool calls. Nudging it to continue ({self.consecutive_no_tool_calls}/3)."
+                )
+                self._append_history({"role": "user", "content": nudge_msg})
                 self.step_count += 1
                 continue
-            
+
             self.consecutive_no_tool_calls = 0
-            
+
             should_continue = self._process_tools(message.tool_calls)
             if not should_continue:
                 break
@@ -217,7 +220,7 @@ class Agent:
             "messages": messages,
             "tools": get_openai_tools(),
         }
-        
+
         # Inject dynamic kwargs from config (like reasoning_effort or thinking)
         model_kwargs = _config.get("agent", {}).get("model_kwargs", {})
         completion_kwargs.update(model_kwargs)

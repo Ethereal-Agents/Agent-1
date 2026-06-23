@@ -67,7 +67,7 @@ def test_get_env_system_prompt():
 
 def test_get_env_system_prompt_empty():
     from tools.registry import TOOLS, get_env_system_prompt
-    
+
     original_env = TOOLS[0].env
     try:
         TOOLS[0].env = None

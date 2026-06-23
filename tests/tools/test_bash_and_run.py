@@ -99,6 +99,7 @@ def test_run_tests_xml_parse_error(temp_test_file):
 
 def test_bash_blocked_by_guard():
     from unittest.mock import MagicMock
+
     tool = BashTool()
     tool._guard.check = MagicMock(return_value=MagicMock(blocked=True, message="Blocked by guard"))
     result = tool.run("rm foo.py")
@@ -107,6 +108,7 @@ def test_bash_blocked_by_guard():
 
 def test_bash_exception():
     from unittest.mock import MagicMock
+
     tool = BashTool()
     tool.env.run_bash = MagicMock(side_effect=Exception("mocked error"))
     result = tool.run("ls")

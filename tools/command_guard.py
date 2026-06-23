@@ -5,6 +5,7 @@ from dataclasses import dataclass
 @dataclass
 class InterceptionResult:
     """Returned by the guard for every command check."""
+
     blocked: bool
     message: str
 
