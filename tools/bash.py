@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from tools.base import BaseTool
 from tools.utils import format_error, truncate_output
+from tools.command_guard import DestructiveCommandGuard
 
 
 class BashArgs(BaseModel):
@@ -19,7 +20,16 @@ class BashTool(BaseTool):
     description = "Executes a bash command in the project environment."
     args_schema = BashArgs
 
+    def __init__(self, env=None):
+        super().__init__(env)
+        self._guard = DestructiveCommandGuard(env=self.env)
+
     def run(self, command: str, timeout: int = 120, **kwargs) -> str:
+        # --- Safety guard: check before execution ---
+        guard_result = self._guard.check(command)
+        if guard_result.blocked:
+            return guard_result.message
+
         try:
             result = self.env.run_bash(command, timeout)
         except subprocess.TimeoutExpired:

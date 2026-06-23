@@ -47,6 +47,11 @@ class Agent:
         # litellm.log_raw_request_response = True
         # litellm.set_verbose = True
 
+        # Register custom pricing from config for unsupported models
+        custom_pricing = _config.get("custom_pricing", {})
+        if custom_pricing:
+            litellm.register_model(custom_pricing)
+
         self.model = model
         self.compaction_model = compaction_model
         self.instance_id = instance_id
@@ -183,12 +188,18 @@ class Agent:
                     if isinstance(content[-1], dict):
                         content[-1]["cache_control"] = {"type": "ephemeral"}
 
+        completion_kwargs = {
+            "model": self.model,
+            "messages": messages,
+            "tools": get_openai_tools(),
+        }
+        
+        # Inject dynamic kwargs from config (like reasoning_effort or thinking)
+        model_kwargs = _config.get("agent", {}).get("model_kwargs", {})
+        completion_kwargs.update(model_kwargs)
+
         try:
-            response = litellm.completion(
-                model=self.model,
-                messages=messages,
-                tools=get_openai_tools(),
-            )
+            response = litellm.completion(**completion_kwargs)
             print("Raw LLM API Response:")
             print(response)
         except Exception as e:
