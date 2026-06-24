@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "anthropic>=0.109.1",
+    "datasets>=5.0.0",
     "docker>=7.1.0",
     "huggingface-hub>=1.18.0",
     "ipykernel>=7.3.0",
@@ -39,4 +40,4 @@ ignore = ["E501"] # Ignore line too long, as error hint strings often exceed 100
 exclude = ["tests", "doc"]
 
 [tool.coverage.run]
-omit = ["trajectory_viewer/*"]
+omit = ["trajectory_viewer/*", "scripts/*"]
