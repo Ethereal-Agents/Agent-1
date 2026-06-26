@@ -63,3 +63,14 @@ def test_get_env_system_prompt():
     initialize_tools(env)
     prompt = get_env_system_prompt()
     assert "ENVIRONMENT CONTEXT" in prompt
+
+
+def test_get_env_system_prompt_empty():
+    from tools.registry import TOOLS, get_env_system_prompt
+
+    original_env = TOOLS[0].env
+    try:
+        TOOLS[0].env = None
+        assert get_env_system_prompt() == ""
+    finally:
+        TOOLS[0].env = original_env

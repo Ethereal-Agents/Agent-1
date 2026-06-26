@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 import uuid
 from datetime import datetime
@@ -22,16 +23,26 @@ from tools.registry import ToolName, execute_tool, get_env_system_prompt, get_op
 
 def _extract_reasoning(message: Any) -> Any:
     """Extract reasoning/content robustly from a LiteLLM message."""
-    reasoning = getattr(message, "content", None)
-    if not reasoning and getattr(message, "reasoning_content", None):
-        reasoning = message.reasoning_content
-    elif (
-        not reasoning
+    parts = []
+
+    reasoning_content = getattr(message, "reasoning_content", None)
+    if (
+        not reasoning_content
         and getattr(message, "provider_specific_fields", None)
         and isinstance(message.provider_specific_fields, dict)
     ):
-        reasoning = message.provider_specific_fields.get("reasoning")
-    return reasoning
+        reasoning_content = message.provider_specific_fields.get("reasoning")
+
+    if reasoning_content and isinstance(reasoning_content, str) and reasoning_content.strip():
+        parts.append(reasoning_content.strip())
+
+    content = getattr(message, "content", None)
+    if content and isinstance(content, str) and content.strip():
+        # Avoid printing just "</think>" if it's an artifact of the reasoning model
+        if content.strip() != "</think>":
+            parts.append(content.strip())
+
+    return "\n\n".join(parts) if parts else None
 
 
 class Agent:
@@ -45,7 +56,17 @@ class Agent:
             instance_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
 
         # litellm.log_raw_request_response = True
-        # litellm.set_verbose = True
+
+        litellm.suppress_debug_info = True
+        litellm.set_verbose = False
+        logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+        logging.getLogger("LiteLLM Router").setLevel(logging.WARNING)
+        logging.getLogger("LiteLLM Proxy").setLevel(logging.WARNING)
+
+        # Register custom pricing from config for unsupported models
+        custom_pricing = _config.get("custom_pricing", {})
+        if custom_pricing:
+            litellm.register_model(custom_pricing)
 
         self.model = model
         self.compaction_model = compaction_model
@@ -148,8 +169,25 @@ class Agent:
                 print(f"\n[Reasoning]: {reasoning.strip()}")
 
             if not hasattr(message, "tool_calls") or not message.tool_calls:
-                print("\n[Agent finished. No tools called.]")
-                break
+                self.consecutive_no_tool_calls = getattr(self, "consecutive_no_tool_calls", 0) + 1
+                if self.consecutive_no_tool_calls >= 3:
+                    print("\n[HARD STOP] Agent repeatedly failed to call tools.")
+                    break
+
+                content_val = getattr(message, "content", None)
+                if not content_val or not content_val.strip():
+                    nudge_msg = "Your response was empty and did not contain a tool call. Please use a tool to continue your task, or call `finish` if you are done."
+                else:
+                    nudge_msg = "You must use a tool (such as bash, read_file, edit_file) to interact with the environment, or call `finish` if you are completely done."
+
+                print(
+                    f"\n[Soft Nudge] Agent returned no tool calls. Nudging it to continue ({self.consecutive_no_tool_calls}/3)."
+                )
+                self._append_history({"role": "user", "content": nudge_msg})
+                self.step_count += 1
+                continue
+
+            self.consecutive_no_tool_calls = 0
 
             should_continue = self._process_tools(message.tool_calls)
             if not should_continue:
@@ -183,12 +221,18 @@ class Agent:
                     if isinstance(content[-1], dict):
                         content[-1]["cache_control"] = {"type": "ephemeral"}
 
+        completion_kwargs = {
+            "model": self.model,
+            "messages": messages,
+            "tools": get_openai_tools(),
+        }
+
+        # Inject dynamic kwargs from config (like reasoning_effort or thinking)
+        model_kwargs = _config.get("agent", {}).get("model_kwargs", {})
+        completion_kwargs.update(model_kwargs)
+
         try:
-            response = litellm.completion(
-                model=self.model,
-                messages=messages,
-                tools=get_openai_tools(),
-            )
+            response = litellm.completion(**completion_kwargs)
             print("Raw LLM API Response:")
             print(response)
         except Exception as e:
@@ -359,15 +403,12 @@ class Agent:
             pass  # Fails gracefully if the model is too new or cost is unknown
 
     def _finalize_run(self):
-        duration = time.time() - self.start_time
-
-        # Basic metrics
         metrics = {
             "status": "completed" if self.step_count < MAX_STEPS else "max_steps_reached",
             "total_steps": self.step_count,
             "total_tokens": self.cumulative_tokens,
             "cost": self.cumulative_cost,
-            "duration_seconds": duration,
+            "duration_seconds": time.time() - self.start_time,
         }
 
         save_metrics(self.instance_id, metrics)

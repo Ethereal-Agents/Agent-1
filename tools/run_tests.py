@@ -16,34 +16,69 @@ class RunTestsArgs(BaseModel):
 
 class RunTestsTool(BaseTool):
     name = "run_tests"
-    description = "Runs the test suite using pytest and returns structured execution results. Note: This tool specifically expects and runs pytest."
+    description = "Runs the test suite using the repository's native test runner (pytest, Django runtests.py, SymPy bin/test) and returns execution results."
     args_schema = RunTestsArgs
 
     def run(self, targets: list[str], **kwargs) -> str:
         report_file = f"/tmp/.test_report.{uuid.uuid4().hex}.xml"
 
+        # Framework detection using a single fast bash evaluation
+        detect_cmd = "if [ -f tests/runtests.py ]; then echo django; elif [ -f bin/test ]; then echo sympy; else echo pytest; fi"
+        framework = self.env.run_bash(detect_cmd, timeout=10).stdout.strip()
+        print(f"[RunTestsTool] Detected framework: {framework}")
+
+        target_str = " ".join(targets)
+
         try:
-            # We don't strictly care about the return code here (pytest returns 1 on failure),
-            # because we will parse the XML it spits out.
-            cmd_str = f"python -m pytest {' '.join(targets)} --junitxml={report_file}"
-            result = self.env.run_bash(cmd_str, timeout=300)
+            if framework == "django":
+                # Django's runtests.py hates file paths and expects module labels (e.g. 'model_fields.tests')
+                # We seamlessly convert file paths and pytest-style syntax into Django labels.
+                formatted_targets = []
+                for t in targets:
+                    t = t.rstrip("/")
+                    t = t.replace("::", ".")
+                    if t.endswith(".py"):
+                        t = t[:-3]
+                    t = t.replace(".py.", ".")
+                    t = t.replace("/", ".")
+                    if t.startswith("tests."):
+                        t = t[6:]
+                    formatted_targets.append(t)
+
+                target_str = " ".join(formatted_targets)
+                cmd_str = f"python tests/runtests.py {target_str}"
+                result = self.env.run_bash(cmd_str, timeout=300)
+                status = "PASSED" if result.returncode == 0 else "FAILED"
+                return f"[TEST EXECUTION {status}]\n\n<stdout>\n{truncate_output(result.stdout)}\n</stdout>\n<stderr>\n{truncate_output(result.stderr)}\n</stderr>"
+
+            elif framework == "sympy":
+                cmd_str = f"bin/test {target_str}"
+                result = self.env.run_bash(cmd_str, timeout=300)
+                status = "PASSED" if result.returncode == 0 else "FAILED"
+                return f"[TEST EXECUTION {status}]\n\n<stdout>\n{truncate_output(result.stdout)}\n</stdout>\n<stderr>\n{truncate_output(result.stderr)}\n</stderr>"
+
+            else:
+                # We don't strictly care about the return code here (pytest returns 1 on failure),
+                # because we will parse the XML it spits out.
+                cmd_str = f"python -m pytest {target_str} --junitxml={report_file}"
+                result = self.env.run_bash(cmd_str, timeout=300)
         except subprocess.TimeoutExpired:
             return format_error(
-                reason="Pytest execution timed out after 300 seconds.",
+                reason="Test execution timed out after 300 seconds.",
                 attempted=cmd_str,
                 hint="One of the tests might contain an infinite loop or require user input.",
             )
         except Exception as e:
             return format_error(
-                reason=f"Failed to execute pytest: {str(e)}",
+                reason=f"Failed to execute tests: {str(e)}",
                 attempted=f"run_tests(targets={targets})",
             )
 
         if result.returncode == 127:
             return format_error(
-                reason="pytest or python is not installed or not in PATH.",
+                reason="Test runner or python is not installed or not in PATH.",
                 attempted=cmd_str,
-                hint="Ensure you are running in an environment where pytest is installed.",
+                hint="Ensure you are running in an environment where the test framework is installed.",
             )
 
         try:
