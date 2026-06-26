@@ -16,13 +16,3 @@ __pycache__/
 
 # Data
 runs/
-logs/
-eval_results/
-.DS_Store
-
-# Scratch/Misc
-doc/
-docs/
-notebooks/
-*.smoke-test.json
-*.zip
