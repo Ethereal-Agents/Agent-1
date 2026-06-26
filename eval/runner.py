@@ -187,8 +187,8 @@ def run_single_task(instance: dict, config: EvalConfig, output_dir: str) -> Task
             trajectory_path=trajectory_path,
         )
 
-        from dataclasses import asdict
         import json
+        from dataclasses import asdict
         with open(result_path, "w") as f:
             json.dump(asdict(task_result), f, indent=2)
 

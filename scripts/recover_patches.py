@@ -17,12 +17,12 @@ import sys
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, base_dir)
 
-from eval.dataset import load_swe_bench
-from eval.runner import _build_swebench_image, _extract_patch, _get_docker_client
-from eval.grader import write_predictions
-from eval.models import TaskResult
-from tools.environment import DockerEnvironment
-from tools.registry import initialize_tools, execute_tool
+from eval.dataset import load_swe_bench  # noqa: E402
+from eval.grader import write_predictions  # noqa: E402
+from eval.models import TaskResult  # noqa: E402
+from eval.runner import _build_swebench_image, _extract_patch, _get_docker_client  # noqa: E402
+from tools.environment import DockerEnvironment  # noqa: E402
+from tools.registry import execute_tool, initialize_tools  # noqa: E402
 
 
 def check_trajectory_finished(trajectory_path: str):
