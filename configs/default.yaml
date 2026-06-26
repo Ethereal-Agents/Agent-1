@@ -1,10 +1,52 @@
 agent:
   max_steps: 200
-  fallback_compaction_limit: 60000
+  fallback_compaction_limit: 100000
   compaction_token_fraction: 0.75
-  default_model: "claude-haiku-4-5-20251001"
-  compaction_model: "claude-haiku-4-5-20251001"
+  default_model: "openrouter/minimax/minimax-m3"
+  compaction_model: "openrouter/minimax/minimax-m3"
+  
+  # Configure reasoning/thinking toggles here.
+  # For MiniMax M3, use its native thinking parameter:
+  #   extra_body: { thinking: { type: "adaptive" } }
+  # For DeepSeek V4 Flash, use OpenRouter's universal parameter:
+  #   extra_body: { reasoning: { effort: "high" } }
+  model_kwargs:
+    extra_body:
+      thinking:
+        type: "adaptive"
+
 paths:
   runs_dir: "runs"
   system_prompt_file: "prompts/system_prompt.txt"
   compaction_prompt_file: "prompts/compaction_prompt.txt"
+
+custom_pricing:
+  # Base provider slugs
+  "minimax/minimax-m3":
+    input_cost_per_token: 0.000000106
+    output_cost_per_token: 0.00000121
+    max_tokens: 1000000
+  "deepseek/deepseek-v4-flash":
+    input_cost_per_token: 0.000000063
+    output_cost_per_token: 0.000000248
+    max_tokens: 1000000
+    
+  # OpenRouter slugs (added for safety since your default_model uses the prefix)
+  "openrouter/minimax/minimax-m3":
+    input_cost_per_token: 0.000000106
+    output_cost_per_token: 0.00000121
+    max_tokens: 1000000
+  "openrouter/deepseek/deepseek-v4-flash":
+    input_cost_per_token: 0.000000063
+    output_cost_per_token: 0.000000248
+    max_tokens: 1000000
+    
+  # Exact backend aliases returned by OpenRouter API response
+  "minimax/minimax-m3-20260531":
+    input_cost_per_token: 0.000000106
+    output_cost_per_token: 0.00000121
+    max_tokens: 1000000
+  "deepseek/deepseek-v4-flash-20260423":
+    input_cost_per_token: 0.000000063
+    output_cost_per_token: 0.000000248
+    max_tokens: 1000000

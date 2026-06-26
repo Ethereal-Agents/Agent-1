@@ -57,6 +57,7 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
         container_id: str = None,
         setup_command: str = None,
         mount_dir: str = None,
+        command_prefix: str = "",
     ):
         if docker is None:
             raise ImportError("The 'docker' python package is required. Run 'uv add docker'.")
@@ -71,6 +72,7 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
 
         self.client = docker.from_env()
         self._owns_container = False
+        self.command_prefix = command_prefix
 
         if container_id:
             self.container = self.client.containers.get(container_id)
@@ -133,13 +135,11 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
     def run_bash(self, cmd: str, timeout: int) -> subprocess.CompletedProcess:
         # We enforce timeout on the host using a subprocess calling the docker cli
         # This is more reliable for timeout enforcement than the docker python SDK exec_run
-        docker_cmd = ["docker", "exec", self.container.id, "/bin/bash", "-c", cmd]
+        full_cmd = f"{self.command_prefix} {cmd}"
+        docker_cmd = ["docker", "exec", self.container.id, "/bin/bash", "-c", full_cmd]
         return subprocess.run(docker_cmd, capture_output=True, text=True, timeout=timeout)
 
     def read_file(self, path: str) -> str:
-        # docker cp resolves relative paths from / instead of the container's working_dir
-        if not path.startswith("/"):
-            path = f"/workspace/{path}"
 
         with tempfile.TemporaryDirectory() as tmpdir:
             local_file_path = os.path.join(tmpdir, os.path.basename(path))
@@ -164,9 +164,6 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
                 return f.read()
 
     def write_file(self, path: str, content: str) -> None:
-        # docker cp resolves relative paths from / instead of the container's working_dir
-        if not path.startswith("/"):
-            path = f"/workspace/{path}"
 
         with tempfile.TemporaryDirectory() as tmpdir:
             local_file_path = os.path.join(tmpdir, os.path.basename(path))
@@ -190,8 +187,9 @@ class DockerEnvironment(ExecutionEnvironment):  # pragma: no cover
     def get_system_prompt_addition(self) -> str:
         return (
             "ENVIRONMENT CONTEXT:\n"
-            "You are executing inside a sandboxed Linux Docker container. Your workspace is mounted at `/workspace`. "
+            "You are executing inside a sandboxed Linux Docker container.\n"
             "File operations (read/write) are proxied via `docker cp`. If you encounter Docker-related errors "
             "(e.g., 'docker cp failed: Error response from daemon...'), they refer to the container's isolated file system. "
-            "Standard Linux behavior applies within."
+            "Standard Linux behavior applies within.\n"
+            "CRITICAL: You MUST always use absolute paths for all file operations (reading, editing, writing)."
         )

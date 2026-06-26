@@ -42,7 +42,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=0.109.1" },
-    { name = "datasets", specifier = ">=2.14.0" },
+    { name = "datasets", specifier = ">=5.0.0" },
     { name = "docker", specifier = ">=7.1.0" },
     { name = "huggingface-hub", specifier = ">=1.18.0" },
     { name = "ipykernel", specifier = ">=7.3.0" },
