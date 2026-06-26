@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any, Dict, List
 
 import litellm
+import logging
 
 from config import (
     COMPACTION_MODEL,
@@ -55,7 +56,13 @@ class Agent:
             instance_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
 
         # litellm.log_raw_request_response = True
-        # litellm.set_verbose = True
+        
+        litellm.suppress_debug_info = True
+        litellm.set_verbose = False
+        logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+        logging.getLogger("LiteLLM Router").setLevel(logging.WARNING)
+        logging.getLogger("LiteLLM Proxy").setLevel(logging.WARNING)
+
 
         # Register custom pricing from config for unsupported models
         custom_pricing = _config.get("custom_pricing", {})
