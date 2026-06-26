@@ -3,6 +3,6 @@ mode = "local" # options: "local", "docker", "docker-existing"
 timeout_seconds = 120
 
 [docker]
-base_image = "python:3.11-slim"
+base_image = "python:3.11"
 target_container = "" # if mode is docker-existing, specifies the container to attach to
 setup_command = "" # e.g. "pip install -e .[dev]" - runs once when container starts
