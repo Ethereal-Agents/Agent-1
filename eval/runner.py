@@ -22,6 +22,17 @@ def _build_swebench_image(instance: dict, namespace: str) -> str:
     # make_test_spec creates the specification for the instance
     test_spec = make_test_spec(instance, namespace=namespace or "swebench")
 
+    # [HOTFIX] PEP-517 build isolation downloads latest setuptools (>=70) which dropped pkg_resources,
+    # breaking older repos like astropy. We force pip to use setuptools<70 for all installs and build envs.
+    patched_script = []
+    for cmd in test_spec.repo_script_list:
+        if "pip install" in cmd:
+            # For older repos like Astropy, PEP 517 build isolation pulls broken setuptools>=70 and misses jinja2.
+            patched_script.append("python -m pip install setuptools==68.0.0 setuptools_scm==8.1.0 wheel cython jinja2")
+            cmd = cmd.replace("pip install", "pip install --no-build-isolation")
+        patched_script.append(cmd)
+    test_spec.repo_script_list = patched_script
+
     # build_instance_image builds the per-instance image (repo + commit + test fixtures)
     build_instance_image(
         test_spec=test_spec,
@@ -52,9 +63,22 @@ def _extract_patch(container_id: str, base_commit: str) -> str | None:
 
     Uses `git diff <base_commit>` to capture all changes — unstaged, staged, *and*
     committed — relative to the exact starting state from the SWE-bench task.
+    Excludes environment files modified by SWE-bench.
     """
+    cmd = [
+        "docker", "exec", container_id,
+        "git", "diff", base_commit,
+        "--", ".",
+        ":(exclude)setup.py",
+        ":(exclude)tox.ini",
+        ":(exclude)environment.yml",
+        ":(exclude)requirements.txt",
+        ":(exclude)Pipfile",
+        ":(exclude)pyproject.toml",
+        ":(exclude)setup.cfg"
+    ]
     result = subprocess.run(
-        ["docker", "exec", container_id, "git", "diff", base_commit],
+        cmd,
         capture_output=True,
         text=True,
         timeout=30,
@@ -84,10 +108,28 @@ def run_single_task(instance: dict, config: EvalConfig, output_dir: str) -> Task
     start_time = time.time()
     container = None
 
-    # Trajectory goes into output_dir/<instance_id>/
-    instance_run_dir = os.path.join(output_dir, "trajectories", instance_id)
+    # Trajectory goes into output_dir/trajectories/<instance_id>/
+    trajectories_dir = os.path.join(output_dir, "trajectories")
+    instance_run_dir = os.path.join(trajectories_dir, instance_id)
     os.makedirs(instance_run_dir, exist_ok=True)
     trajectory_path = os.path.join(instance_run_dir, "trajectory.jsonl")
+    result_path = os.path.join(instance_run_dir, "result.json")
+    result_path = os.path.join(instance_run_dir, "result.json")
+
+    if config.resume:
+        if os.path.exists(result_path):
+            try:
+                import json
+                with open(result_path, "r") as f:
+                    data = json.load(f)
+                print(f"[{instance_id}] Resuming from saved result.json")
+                return TaskResult(**data)
+            except Exception as e:
+                print(f"[{instance_id}] Failed to load result.json: {e}")
+        
+        # If no result.json or failed to load, we must empty the trajectory file and restart
+        if os.path.exists(trajectory_path):
+            open(trajectory_path, "w").close()
 
     try:
         # --- Step 1: Build image ---
@@ -104,12 +146,22 @@ def run_single_task(instance: dict, config: EvalConfig, output_dir: str) -> Task
         )
         print(f"[{instance_id}] Container started: {container.short_id}")
 
-        env = DockerEnvironment(container_id=container.id)
+        conda_prefix = (
+            "if [ -f /opt/miniconda3/etc/profile.d/conda.sh ]; then "
+            "source /opt/miniconda3/etc/profile.d/conda.sh && conda activate testbed || true; "
+            "elif [ -f /miniconda/etc/profile.d/conda.sh ]; then "
+            "source /miniconda/etc/profile.d/conda.sh && conda activate testbed || true; "
+            "fi;"
+        )
+        env = DockerEnvironment(
+            container_id=container.id, 
+            command_prefix=conda_prefix,
+        )
         initialize_tools(env)
 
         # --- Step 3: Run the agent ---
-        # Override RUNS_DIR so trajectory is saved in our output dir
-        os.environ["RECALL_RUNS_DIR"] = instance_run_dir
+        # Override RUNS_DIR so trajectory is saved correctly in trajectories_dir
+        os.environ["RECALL_RUNS_DIR"] = trajectories_dir
 
         agent = Agent(model=model, instance_id=instance_id)
         agent.run(issue_description=format_task_prompt(instance))
@@ -123,7 +175,7 @@ def run_single_task(instance: dict, config: EvalConfig, output_dir: str) -> Task
             f"steps={agent.step_count}, patch={'YES' if patch else 'EMPTY'}"
         )
 
-        return TaskResult(
+        task_result = TaskResult(
             instance_id=instance_id,
             model_name_or_path=model,
             model_patch=patch or "",  # empty string = no changes (swebench expects a string)
@@ -134,6 +186,13 @@ def run_single_task(instance: dict, config: EvalConfig, output_dir: str) -> Task
             duration_seconds=time.time() - start_time,
             trajectory_path=trajectory_path,
         )
+
+        from dataclasses import asdict
+        import json
+        with open(result_path, "w") as f:
+            json.dump(asdict(task_result), f, indent=2)
+
+        return task_result
 
     except Exception as e:
         print(f"[{instance_id}] ERROR: {e}")

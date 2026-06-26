@@ -19,6 +19,8 @@ class EvalConfig:
     # Budget
     budget_warn_threshold: float = 5.0
     budget_warn_interval_pct: list = field(default_factory=lambda: [50, 80, 100])
+    # Resume
+    resume: bool = False
 
 
 @dataclass

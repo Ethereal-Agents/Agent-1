@@ -5,10 +5,10 @@ eval:
   max_workers_inference: 2
   timeout_per_task: 1800      # seconds (30 min)
   output_dir: "eval_results"
-  namespace: ""               # set empty for ARM/OrbStack local image builds
+  namespace: "swebench"         # use pre-built images from DockerHub (much faster)
 
 agent:
-  model: "claude-haiku-4-5-20251001"
+  model: "openrouter/minimax/minimax-m3"
 
 budget:
   warn_threshold_usd: 5.0

@@ -1,5 +1,5 @@
 {
-  "description": "10-instance dev tier using valid SWE-bench_Verified IDs.",
+  "description": "50-instance dev tier using valid SWE-bench_Verified IDs (Distribution - easy: 20, medium: 26, hard: 4).",
   "dataset": "princeton-nlp/SWE-bench_Verified",
   "instance_ids": [
     "astropy__astropy-13398",
