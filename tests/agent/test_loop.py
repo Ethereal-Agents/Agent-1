@@ -399,7 +399,8 @@ class TestAgentRun:
         ):
             agent.run("test issue")
 
-        assert agent.step_count == 0
+        assert agent.step_count == 2
+        assert getattr(agent, "consecutive_no_tool_calls", 0) == 3
 
     def test_run_loop_should_not_continue(self, mock_config):
         agent = Agent()

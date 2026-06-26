@@ -95,3 +95,21 @@ def test_run_tests_xml_parse_error(temp_test_file):
     tool.env.read_file = MagicMock(return_value="<invalid><xml")
     result = tool.run(targets=[temp_test_file])
     assert "Failed to parse pytest XML" in result
+
+
+def test_bash_blocked_by_guard():
+    from unittest.mock import MagicMock
+
+    tool = BashTool()
+    tool._guard.check = MagicMock(return_value=MagicMock(blocked=True, message="Blocked by guard"))
+    result = tool.run("rm foo.py")
+    assert result == "Blocked by guard"
+
+
+def test_bash_exception():
+    from unittest.mock import MagicMock
+
+    tool = BashTool()
+    tool.env.run_bash = MagicMock(side_effect=Exception("mocked error"))
+    result = tool.run("ls")
+    assert "Failed to execute command: mocked error" in result

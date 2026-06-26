@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 from tools.base import BaseTool
 from tools.bash import BashTool
 from tools.environment import ExecutionEnvironment
-from tools.file_ops import EditTool, ReadFileTool
+from tools.file_ops import EditTool, InsertTool, ReadFileTool
 from tools.finish import FinishTool
 from tools.run_tests import RunTestsTool
 from tools.search import CodeSearchTool
@@ -23,6 +23,7 @@ class ToolName(str, enum.Enum):
 TOOLS: List[BaseTool] = [
     ReadFileTool(),
     EditTool(),
+    InsertTool(),
     BashTool(),
     CodeSearchTool(),
     RunTestsTool(),
