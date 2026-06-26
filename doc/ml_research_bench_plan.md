@@ -6,6 +6,9 @@ The benchmark contains 7 tasks across three categories. Each task is a self-cont
 
 The tasks are deliberately scoped to Maya's domain — the same domain the paper corpus covers. This is not a bias in the benchmark; it is the use case. A practitioner curates a corpus of papers relevant to their work, and the agent uses that corpus to help with tasks in that same domain. The benchmark measures how much value that domain-specific corpus adds. If the papers weren't relevant to the tasks, the product would be pointless.
 
+**On validity:** The line between a valid benchmark and a rigged one is design direction. A rigged benchmark starts from a paper quirk ("this paper uses an unusual constant — let's design a task that forces the agent to find it") and invents a synthetic scenario around it. Our tasks are designed in the opposite direction: each task starts from a real scenario Maya would face, and the paper is simply the best available reference for solving it. The scenario exists independently of the paper; the paper is a resource, not the reason the scenario exists.
+
+
 The headline experiment is an ablation: run all tasks **with arxiv-scholar enabled vs. disabled**, same model, same seeds. The delta tells us whether research-grounding actually helps, and on which task types.
 
 ---
