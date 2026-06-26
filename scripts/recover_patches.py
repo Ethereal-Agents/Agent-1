@@ -1,7 +1,7 @@
 """Script to recover patches from completed agent trajectories without using LLM calls.
 
-This script replays the exact state-mutating tool calls (bash, edit, insert) from 
-the trajectory.jsonl files into a fresh Docker environment, and then extracts the 
+This script replays the exact state-mutating tool calls (bash, edit, insert) from
+the trajectory.jsonl files into a fresh Docker environment, and then extracts the
 final patch via git diff.
 
 Usage:
@@ -42,7 +42,7 @@ def check_trajectory_finished(trajectory_path: str):
 
             try:
                 msg = json.loads(line)
-                
+
                 # Check for assistant messages
                 if msg.get("role") == "assistant":
                     step_count += 1
@@ -52,7 +52,7 @@ def check_trajectory_finished(trajectory_path: str):
                             func = tc.get("function", {})
                             name = func.get("name")
                             args_str = func.get("arguments", "{}")
-                            
+
                             try:
                                 args_dict = json.loads(args_str)
                             except json.JSONDecodeError:
@@ -71,6 +71,7 @@ def check_trajectory_finished(trajectory_path: str):
 
     # If the step count hit our configured max limit, it's also considered done.
     from config import MAX_STEPS
+
     if step_count >= MAX_STEPS:
         is_done = True
 
@@ -84,7 +85,7 @@ def recover_patch_for_instance(instance: dict, mutating_calls: list, namespace: 
     try:
         print(f"[{instance_id}] Rebuilding image...")
         image_name = _build_swebench_image(instance, namespace=namespace)
-        
+
         client = _get_docker_client()
         print(f"[{instance_id}] Starting container...")
         container = client.containers.run(
@@ -93,7 +94,7 @@ def recover_patch_for_instance(instance: dict, mutating_calls: list, namespace: 
             detach=True,
             remove=True,
         )
-        
+
         conda_prefix = (
             "if [ -f /opt/miniconda3/etc/profile.d/conda.sh ]; then "
             "source /opt/miniconda3/etc/profile.d/conda.sh && conda activate testbed || true; "
@@ -102,20 +103,20 @@ def recover_patch_for_instance(instance: dict, mutating_calls: list, namespace: 
             "fi;"
         )
         env = DockerEnvironment(
-            container_id=container.id, 
+            container_id=container.id,
             command_prefix=conda_prefix,
         )
         initialize_tools(env)
-        
+
         print(f"[{instance_id}] Executing {len(mutating_calls)} mutating tool calls...")
         for name, args in mutating_calls:
             # We don't care about the tool output here, just the state mutation
             execute_tool(name, args)
-            
+
         print(f"[{instance_id}] Extracting patch...")
         patch = _extract_patch(container.id, instance["base_commit"])
         return patch or ""
-        
+
     finally:
         if container:
             try:
@@ -127,14 +128,16 @@ def recover_patch_for_instance(instance: dict, mutating_calls: list, namespace: 
 def main():
     parser = argparse.ArgumentParser(description="Recover patches from trajectories.")
     parser.add_argument("--run-id", required=True, help="The run_id of the interrupted eval run.")
-    parser.add_argument("--dataset", default="princeton-nlp/SWE-bench_Verified", help="HuggingFace dataset name.")
+    parser.add_argument(
+        "--dataset", default="princeton-nlp/SWE-bench_Verified", help="HuggingFace dataset name."
+    )
     parser.add_argument("--split", default="test", help="Dataset split.")
     parser.add_argument("--namespace", default="", help="Docker namespace for swebench.")
     args = parser.parse_args()
 
     run_dir = os.path.join(base_dir, "eval_results", args.run_id)
     trajectories_dir = os.path.join(run_dir, "trajectories")
-    
+
     if not os.path.exists(trajectories_dir):
         print(f"ERROR: Trajectories directory not found: {trajectories_dir}")
         sys.exit(1)
@@ -144,24 +147,26 @@ def main():
     instance_map = {inst["instance_id"]: inst for inst in instances}
 
     recovered_results = []
-    
+
     for instance_id in os.listdir(trajectories_dir):
         # The trajectory logger creates a nested directory because of how RECALL_RUNS_DIR was set
         traj_path = os.path.join(trajectories_dir, instance_id, instance_id, "trajectory.jsonl")
-        
+
         if not os.path.exists(traj_path):
             continue
-            
+
         if instance_id not in instance_map:
             print(f"[{instance_id}] Skipped (not found in dataset '{args.dataset}')")
             continue
-            
+
         is_done, mutating_calls, step_count = check_trajectory_finished(traj_path)
-        
+
         if is_done:
             print(f"\n--- Recovering {instance_id} ---")
-            patch = recover_patch_for_instance(instance_map[instance_id], mutating_calls, args.namespace)
-            
+            patch = recover_patch_for_instance(
+                instance_map[instance_id], mutating_calls, args.namespace
+            )
+
             result = TaskResult(
                 instance_id=instance_id,
                 model_name_or_path="recovered",
@@ -174,12 +179,13 @@ def main():
                 trajectory_path=traj_path,
             )
             recovered_results.append(result)
-            
+
             from dataclasses import asdict
+
             result_path = os.path.join(trajectories_dir, instance_id, "result.json")
             with open(result_path, "w") as f:
                 json.dump(asdict(result), f, indent=2)
-                
+
             print(f"[{instance_id}] Patch extracted. Length: {len(patch)} chars.")
         else:
             print(f"[{instance_id}] Skipped (trajectory not finished)")
@@ -190,7 +196,9 @@ def main():
         print(f"\nSuccessfully recovered {len(recovered_results)} patches.")
         print(f"Predictions written to: {out_file}")
         print("You can now grade them using:")
-        print(f"python -m eval.run_eval --grade-only --predictions {out_file} --run-id {args.run_id}")
+        print(
+            f"python -m eval.run_eval --grade-only --predictions {out_file} --run-id {args.run_id}"
+        )
     else:
         print("\nNo finished trajectories found to recover.")
 

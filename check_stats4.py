@@ -8,5 +8,4 @@ for repo in repos:
     subset = df[df["repo"] == repo]
     passed = subset[subset["tag"] == "resolved"].shape[0]
     total = subset.shape[0]
-    print(f"{repo}: {passed}/{total} ({(passed/total)*100:.1f}%)")
-
+    print(f"{repo}: {passed}/{total} ({(passed / total) * 100:.1f}%)")

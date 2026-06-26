@@ -148,14 +148,14 @@ def main():
     parser.add_argument("--namespace", type=str, default=None)
     parser.add_argument("--budget-warn", type=float, default=None)
     parser.add_argument(
-        "--resume", 
-        action="store_true", 
-        help="Resume interrupted run by skipping finished instances and clearing unfinished trajectories."
+        "--resume",
+        action="store_true",
+        help="Resume interrupted run by skipping finished instances and clearing unfinished trajectories.",
     )
     parser.add_argument(
         "--status",
         action="store_true",
-        help="Print the current progress/status of the run and exit."
+        help="Print the current progress/status of the run and exit.",
     )
 
     args = parser.parse_args()
@@ -188,6 +188,7 @@ def main():
 
     if args.status:
         from eval.dataset import load_swe_bench
+
         all_instances = load_swe_bench(config.dataset, config.split)
         instances = _resolve_instances(args, all_instances, base_dir)
         if not instances:
@@ -293,7 +294,7 @@ def _print_summary(metrics) -> None:
 def _print_run_status(output_dir: str, instances: list) -> None:
     """Print a progress table showing LLM, Patch, and Grading status for all instances."""
     import json
-    
+
     report_path = os.path.join(output_dir, "report.json")
     graded = set()
     if os.path.exists(report_path):
@@ -305,25 +306,25 @@ def _print_run_status(output_dir: str, instances: list) -> None:
                 graded.update(r.get("error", []))
         except Exception:
             pass
-            
+
     print(f"Status for run in: {output_dir}")
     print("-" * 65)
     print(f"{'Instance ID':<35} | {'LLM Done':<10} | {'Patch':<7} | {'Graded'}")
     print("-" * 65)
-    
+
     total = len(instances)
     done_llm = 0
     done_patch = 0
     done_graded = 0
-    
+
     for inst in instances:
         instance_id = inst["instance_id"]
         result_path = os.path.join(output_dir, "trajectories", instance_id, "result.json")
-        
+
         llm_done = "❌"
         patch_extracted = "❌"
         is_graded = "✅" if instance_id in graded else "❌"
-        
+
         if os.path.exists(result_path):
             llm_done = "✅"
             done_llm += 1
@@ -335,12 +336,12 @@ def _print_run_status(output_dir: str, instances: list) -> None:
                     done_patch += 1
             except Exception:
                 pass
-                
+
         if is_graded == "✅":
             done_graded += 1
-            
+
         print(f"{instance_id:<35} | {llm_done:<10} | {patch_extracted:<7} | {is_graded}")
-        
+
     print("-" * 65)
     print(f"Total: {total} instances")
     print(f"LLM Done: {done_llm}/{total}")

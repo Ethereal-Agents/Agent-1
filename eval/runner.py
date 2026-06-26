@@ -28,7 +28,9 @@ def _build_swebench_image(instance: dict, namespace: str) -> str:
     for cmd in test_spec.repo_script_list:
         if "pip install" in cmd:
             # For older repos like Astropy, PEP 517 build isolation pulls broken setuptools>=70 and misses jinja2.
-            patched_script.append("python -m pip install setuptools==68.0.0 setuptools_scm==8.1.0 wheel cython jinja2")
+            patched_script.append(
+                "python -m pip install setuptools==68.0.0 setuptools_scm==8.1.0 wheel cython jinja2"
+            )
             cmd = cmd.replace("pip install", "pip install --no-build-isolation")
         patched_script.append(cmd)
     test_spec.repo_script_list = patched_script
@@ -66,16 +68,21 @@ def _extract_patch(container_id: str, base_commit: str) -> str | None:
     Excludes environment files modified by SWE-bench.
     """
     cmd = [
-        "docker", "exec", container_id,
-        "git", "diff", base_commit,
-        "--", ".",
+        "docker",
+        "exec",
+        container_id,
+        "git",
+        "diff",
+        base_commit,
+        "--",
+        ".",
         ":(exclude)setup.py",
         ":(exclude)tox.ini",
         ":(exclude)environment.yml",
         ":(exclude)requirements.txt",
         ":(exclude)Pipfile",
         ":(exclude)pyproject.toml",
-        ":(exclude)setup.cfg"
+        ":(exclude)setup.cfg",
     ]
     result = subprocess.run(
         cmd,
@@ -120,13 +127,14 @@ def run_single_task(instance: dict, config: EvalConfig, output_dir: str) -> Task
         if os.path.exists(result_path):
             try:
                 import json
+
                 with open(result_path, "r") as f:
                     data = json.load(f)
                 print(f"[{instance_id}] Resuming from saved result.json")
                 return TaskResult(**data)
             except Exception as e:
                 print(f"[{instance_id}] Failed to load result.json: {e}")
-        
+
         # If no result.json or failed to load, we must empty the trajectory file and restart
         if os.path.exists(trajectory_path):
             open(trajectory_path, "w").close()
@@ -154,7 +162,7 @@ def run_single_task(instance: dict, config: EvalConfig, output_dir: str) -> Task
             "fi;"
         )
         env = DockerEnvironment(
-            container_id=container.id, 
+            container_id=container.id,
             command_prefix=conda_prefix,
         )
         initialize_tools(env)
@@ -189,6 +197,7 @@ def run_single_task(instance: dict, config: EvalConfig, output_dir: str) -> Task
 
         import json
         from dataclasses import asdict
+
         with open(result_path, "w") as f:
             json.dump(asdict(task_result), f, indent=2)
 

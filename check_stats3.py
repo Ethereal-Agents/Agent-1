@@ -8,4 +8,3 @@ for reason in ["recovered", "submitted"]:
     print(f"--- {reason.upper()} ---")
     print(subset["repo"].value_counts().to_string())
     print("\n")
-

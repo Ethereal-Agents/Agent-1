@@ -5,5 +5,4 @@ for reason in df["exit_reason"].unique():
     subset = df[df["exit_reason"] == reason]
     passed = subset[subset["tag"] == "resolved"].shape[0]
     total = subset.shape[0]
-    print(f"{reason}: {passed}/{total} ({(passed/total)*100:.1f}%)")
-
+    print(f"{reason}: {passed}/{total} ({(passed / total) * 100:.1f}%)")

@@ -14,8 +14,7 @@ silence_code = """
 """
 
 content = content.replace(
-    "litellm.suppress_debug_info = True\n        litellm.set_verbose = False",
-    silence_code
+    "litellm.suppress_debug_info = True\n        litellm.set_verbose = False", silence_code
 )
 
 with open("agent/loop.py", "w") as f:

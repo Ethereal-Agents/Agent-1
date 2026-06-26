@@ -9,4 +9,3 @@ for reason in ["recovered", "submitted"]:
     print("Tags:")
     print(subset["tag"].value_counts().to_string())
     print("\n")
-
