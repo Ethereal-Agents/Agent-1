@@ -73,7 +73,9 @@ def test_run_tests_timeout():
 
     tool = RunTestsTool()
     mock_detect = subprocess.CompletedProcess(args="", returncode=0, stdout="pytest", stderr="")
-    tool.env.run_bash = MagicMock(side_effect=[mock_detect, subprocess.TimeoutExpired("pytest", 300)])
+    tool.env.run_bash = MagicMock(
+        side_effect=[mock_detect, subprocess.TimeoutExpired("pytest", 300)]
+    )
     result = tool.run(targets=[])
     assert "Test execution timed out after 300 seconds." in result
 
