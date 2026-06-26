@@ -18,6 +18,7 @@ class RunTestsTool(BaseTool):
     name = "run_tests"
     description = "Runs the test suite using the repository's native test runner (pytest, Django runtests.py, SymPy bin/test) and returns execution results."
     args_schema = RunTestsArgs
+
     def run(self, targets: list[str], **kwargs) -> str:
         report_file = f"/tmp/.test_report.{uuid.uuid4().hex}.xml"
 
@@ -25,7 +26,7 @@ class RunTestsTool(BaseTool):
         detect_cmd = "if [ -f tests/runtests.py ]; then echo django; elif [ -f bin/test ]; then echo sympy; else echo pytest; fi"
         framework = self.env.run_bash(detect_cmd, timeout=10).stdout.strip()
         print(f"[RunTestsTool] Detected framework: {framework}")
-        
+
         target_str = " ".join(targets)
 
         try:
@@ -43,19 +44,19 @@ class RunTestsTool(BaseTool):
                     if t.startswith("tests."):
                         t = t[6:]
                     formatted_targets.append(t)
-                
+
                 target_str = " ".join(formatted_targets)
                 cmd_str = f"python tests/runtests.py {target_str}"
                 result = self.env.run_bash(cmd_str, timeout=300)
                 status = "PASSED" if result.returncode == 0 else "FAILED"
                 return f"[TEST EXECUTION {status}]\n\n<stdout>\n{truncate_output(result.stdout)}\n</stdout>\n<stderr>\n{truncate_output(result.stderr)}\n</stderr>"
-            
+
             elif framework == "sympy":
                 cmd_str = f"bin/test {target_str}"
                 result = self.env.run_bash(cmd_str, timeout=300)
                 status = "PASSED" if result.returncode == 0 else "FAILED"
                 return f"[TEST EXECUTION {status}]\n\n<stdout>\n{truncate_output(result.stdout)}\n</stdout>\n<stderr>\n{truncate_output(result.stderr)}\n</stderr>"
-            
+
             else:
                 # We don't strictly care about the return code here (pytest returns 1 on failure),
                 # because we will parse the XML it spits out.
