@@ -7,9 +7,6 @@ eval:
   output_dir: "eval_results"
   namespace: "swebench"         # use pre-built images from DockerHub (much faster)
 
-agent:
-  model: "openrouter/minimax/minimax-m3"
-
 budget:
   warn_threshold_usd: 5.0
   warn_interval_pct: [50, 80, 100]

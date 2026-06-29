@@ -42,6 +42,8 @@ import sys
 import uuid
 from datetime import datetime
 
+from config import DEFAULT_MODEL
+
 
 def _load_eval_config(args):
     """Build EvalConfig from the eval_config.yaml, then apply CLI overrides."""
@@ -68,7 +70,7 @@ def _load_eval_config(args):
         cfg.timeout_per_task = eval_sec.get("timeout_per_task", cfg.timeout_per_task)
         cfg.output_dir = eval_sec.get("output_dir", cfg.output_dir)
         cfg.namespace = eval_sec.get("namespace", cfg.namespace)
-        cfg.model = agent_sec.get("model", cfg.model)
+        cfg.model = agent_sec.get("model", DEFAULT_MODEL)
         cfg.budget_warn_threshold = budget_sec.get("warn_threshold_usd", cfg.budget_warn_threshold)
 
     # CLI overrides

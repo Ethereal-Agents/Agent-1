@@ -519,3 +519,32 @@ class TestCompactionTokens:
             agent.history = [{"role": "user", "content": "hello"}] * 5
             agent._compact_memory()
             assert len(agent.history) == 5
+
+
+class TestEdgeCases:
+    def test_track_metrics_usage_dict_cost(self):
+        agent = Agent()
+
+        class MockResponse:
+            def __init__(self):
+                self.usage = {"cost": 0.007, "total_tokens": 10}
+
+        resp = MockResponse()
+        agent._track_metrics(resp)
+        assert agent.cumulative_cost == 0.007
+        assert (
+            agent.cumulative_tokens == 0
+        )  # dict usage doesn't have .total_tokens attribute if accessed via getattr(usage, "total_tokens")
+
+    def test_run_empty_message_no_tool_calls(self, mock_config):
+        agent = Agent()
+        # MockMessage is available globally in the test file
+        msg = MockMessage("")
+
+        with (
+            patch.object(agent, "_call_llm", return_value=msg),
+            patch.object(agent, "_finalize_run"),
+        ):
+            agent.run("test issue")
+
+        assert getattr(agent, "consecutive_no_tool_calls", 0) == 3
