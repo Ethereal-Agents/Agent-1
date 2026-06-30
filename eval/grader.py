@@ -48,6 +48,15 @@ def grade(
     """
     from swebench.harness.run_evaluation import main as swebench_main
 
+    # Force SWE-bench to write a fresh aggregated report by deleting the stale one
+    if os.path.exists(output_dir):
+        for fname in os.listdir(output_dir):
+            if fname.endswith(f".{run_id}.json"):
+                try:
+                    os.remove(os.path.join(output_dir, fname))
+                except Exception:
+                    pass
+
     print(f"\nGrading with swebench harness (run_id={run_id})...")
     swebench_main(
         dataset_name=dataset_name,

@@ -27,11 +27,15 @@ def _build_swebench_image(instance: dict, namespace: str) -> str:
     patched_script = []
     for cmd in test_spec.repo_script_list:
         if "pip install" in cmd:
-            # For older repos like Astropy, PEP 517 build isolation pulls broken setuptools>=70 and misses jinja2.
-            patched_script.append(
-                "python -m pip install setuptools==68.0.0 setuptools_scm==8.1.0 wheel cython jinja2"
-            )
-            cmd = cmd.replace("pip install", "pip install --no-build-isolation")
+            cmd = cmd.replace("--no-use-pep517", "")
+        if "astropy" in instance["repo"]:
+            if "pip install" in cmd:
+                # For older repos like Astropy, PEP 517 build isolation pulls broken setuptools>=70 and misses jinja2.
+                # We use "setuptools<70" without pinning other packages so older Python versions (3.5/3.6) can still resolve them.
+                patched_script.append(
+                    'python -m pip install "setuptools<70" setuptools_scm wheel cython jinja2 extension-helpers'
+                )
+                cmd = cmd.replace("pip install", "pip install --no-build-isolation")
         patched_script.append(cmd)
     test_spec.repo_script_list = patched_script
 

@@ -4,7 +4,7 @@ import yaml
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Allow override via environment variable, otherwise default to configs/default.yaml

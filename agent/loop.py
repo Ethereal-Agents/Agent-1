@@ -63,11 +63,6 @@ class Agent:
         logging.getLogger("LiteLLM Router").setLevel(logging.WARNING)
         logging.getLogger("LiteLLM Proxy").setLevel(logging.WARNING)
 
-        # Register custom pricing from config for unsupported models
-        custom_pricing = _config.get("custom_pricing", {})
-        if custom_pricing:
-            litellm.register_model(custom_pricing)
-
         self.model = model
         self.compaction_model = compaction_model
         self.instance_id = instance_id
@@ -395,12 +390,24 @@ class Agent:
         if hasattr(response, "usage") and response.usage:
             self.cumulative_tokens += getattr(response.usage, "total_tokens", 0)
 
-        try:
-            step_cost = litellm.completion_cost(completion_response=response)
-            if step_cost:
-                self.cumulative_cost += step_cost
-        except Exception:
-            pass  # Fails gracefully if the model is too new or cost is unknown
+        step_cost = None
+
+        # 1. Try to get native cost first (e.g., from OpenRouter usage object)
+        if hasattr(response, "usage") and response.usage:
+            if hasattr(response.usage, "cost") and getattr(response.usage, "cost") is not None:
+                step_cost = getattr(response.usage, "cost")
+            elif isinstance(response.usage, dict) and response.usage.get("cost") is not None:
+                step_cost = response.usage.get("cost")
+
+        # 2. Fallback to litellm's internal calculation if native cost isn't provided
+        if step_cost is None:
+            try:
+                step_cost = litellm.completion_cost(completion_response=response)
+            except Exception:
+                pass  # Fails gracefully if the model is too new or cost is unknown
+
+        if step_cost:
+            self.cumulative_cost += step_cost
 
     def _finalize_run(self):
         metrics = {
