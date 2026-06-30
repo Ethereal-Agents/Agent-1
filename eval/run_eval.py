@@ -196,7 +196,7 @@ def main():
         if not instances:
             print("ERROR: No instances to evaluate after filtering.")
             sys.exit(1)
-        _print_run_status(run_output_dir, instances)
+        _print_run_status(run_output_dir, instances, run_id)
         sys.exit(0)
 
     predictions_path = os.path.join(run_output_dir, "predictions.jsonl")
@@ -293,21 +293,13 @@ def _print_summary(metrics) -> None:
     print(f"{'=' * 60}\n")
 
 
-def _print_run_status(output_dir: str, instances: list) -> None:
+def _print_run_status(output_dir: str, instances: list, run_id: str) -> None:
     """Print a progress table showing LLM, Patch, and Grading status for all instances."""
     import json
+    from eval.grader import parse_results
 
-    report_path = os.path.join(output_dir, "report.json")
-    graded = set()
-    if os.path.exists(report_path):
-        try:
-            with open(report_path) as f:
-                r = json.load(f)
-                graded.update(r.get("resolved", []))
-                graded.update(r.get("unresolved", []))
-                graded.update(r.get("error", []))
-        except Exception:
-            pass
+    grade_report = parse_results(run_id, output_dir)
+    graded = set(grade_report.per_instance.keys())
 
     print(f"Status for run in: {output_dir}")
     print("-" * 65)
@@ -352,5 +344,5 @@ def _print_run_status(output_dir: str, instances: list) -> None:
     print("-" * 65)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     main()
