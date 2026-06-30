@@ -21,7 +21,7 @@ eval_results/
 .DS_Store
 
 # Scratch/Misc
-doc/
+# doc/
 docs/
 notebooks/
 *.smoke-test.json

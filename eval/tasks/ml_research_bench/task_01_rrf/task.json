@@ -1,0 +1,14 @@
+{
+  "task_id": "task_01_rrf",
+  "title": "Implement Reciprocal Rank Fusion (RRF)",
+  "category": "implement-from-paper",
+  "difficulty": "easy",
+  "description": "A hybrid search system returns two separately ranked result lists (one from dense retrieval, one from sparse). Implement the rrf_fuse() function in search.py that combines them into a single ranked list using the standard RRF formula with k=60.",
+  "docker_image": "python:3.11",
+  "setup_commands": "pip install -r requirements.txt",
+  "dev_test_command": "pytest test_rrf_dev.py -v --tb=short",
+  "grade_test_command": "pytest test_rrf_grade.py -v --tb=short",
+  "timeout_seconds": 600,
+  "expected_dev_tests": 2,
+  "expected_grade_tests": 5
+}

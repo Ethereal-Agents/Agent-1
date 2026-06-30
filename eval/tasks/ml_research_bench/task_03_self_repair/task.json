@@ -1,0 +1,14 @@
+{
+  "task_id": "task_03_self_repair",
+  "title": "Implement LLM Self-Repair Generation (Hard)",
+  "category": "implement-from-paper",
+  "difficulty": "hard",
+  "description": "Implement a self-repair loop for code generation. The system should take a prompt, generate initial code, run a provided validation function, and if the validation fails, pass the error message back to the generator to attempt a fix. It should retry up to `max_retries` times. Implement the generate_with_repair function in generator.py.",
+  "docker_image": "python:3.11",
+  "setup_commands": "pip install -r requirements.txt",
+  "dev_test_command": "pytest test_self_repair_dev.py -v --tb=short",
+  "grade_test_command": "pytest test_self_repair_grade.py -v --tb=short",
+  "timeout_seconds": 600,
+  "expected_dev_tests": 1,
+  "expected_grade_tests": 0
+}
