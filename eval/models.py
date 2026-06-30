@@ -83,3 +83,50 @@ class EvalMetrics:
     turns: StatSummary
     duration: StatSummary
     exit_reason_counts: dict  # {"submitted": N, "max_steps": N, ...}
+
+
+# ==============================================================================
+# ML Research Bench Data Models
+# ==============================================================================
+
+
+@dataclass
+class MLRBConfig:
+    tasks_dir: str = "eval/tasks/ml_research_bench"
+    docker_image: str = "python:3.11"
+    model: str = "gemini/gemma-4-31b-it"
+    timeout_per_task: int = 600
+    output_dir: str = "eval_results"
+    enable_arxiv: bool = False
+    max_workers: int = 1
+    resume: bool = False
+
+
+@dataclass
+class MLRBGradeResult:
+    passed: int
+    failed: int
+    total: int
+    test_score: float
+    output_log: str
+
+
+@dataclass
+class MLRBTaskResult:
+    task_id: str
+    category: str
+    difficulty: str
+    model_name: str
+    model_patch: str | None
+    exit_reason: str
+    tests_passed: int
+    tests_failed: int
+    tests_total: int
+    test_score: float
+    pass_at_1: bool
+    total_steps: int
+    total_tokens: int
+    total_cost: float
+    duration_seconds: float
+    trajectory_path: str
+    pytest_output: str

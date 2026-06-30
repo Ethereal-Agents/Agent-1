@@ -1,0 +1,14 @@
+{
+  "task_id": "task_07_agent_memory",
+  "title": "Implement Agent Memory Retrieval (Hard)",
+  "category": "retrieve-and-reason",
+  "difficulty": "hard",
+  "description": "Implement a semantic memory retrieval system for an LLM agent. The system must support storing observations with timestamps and retrieving the top-k most relevant memories based on semantic similarity to a query, while applying a time-decay factor to prioritize more recent memories. Implement the MemoryManager class in memory_manager.py.",
+  "docker_image": "python:3.11",
+  "setup_commands": "pip install -r requirements.txt",
+  "dev_test_command": "pytest test_memory_dev.py -v --tb=short",
+  "grade_test_command": "pytest test_memory_grade.py -v --tb=short",
+  "timeout_seconds": 600,
+  "expected_dev_tests": 1,
+  "expected_grade_tests": 0
+}

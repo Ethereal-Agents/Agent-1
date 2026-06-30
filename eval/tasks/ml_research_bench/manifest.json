@@ -1,0 +1,9 @@
+{
+  "benchmark": "ml-research-bench",
+  "version": "1.0",
+  "tasks": [
+    {"id": "task_01_rrf", "category": "implement-from-paper", "difficulty": "easy"},
+    {"id": "task_03_self_repair", "category": "implement-from-paper", "difficulty": "hard"},
+    {"id": "task_07_agent_memory", "category": "retrieve-and-reason", "difficulty": "hard"}
+  ]
+}
